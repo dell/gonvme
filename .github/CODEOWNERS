@@ -1,0 +1,23 @@
+# CODEOWNERS
+#
+# documentation for this file can be found at:
+# https://help.github.com/en/articles/about-code-owners
+
+# These are the default owners for the code and will
+# be requested for review when someone opens a pull request.
+# order is alphabetical for easier maintenance.
+#
+# Bahubali Jain (bpjain2004)
+# Francis Nijay (francis-nijay)
+# Harish P (harishp8889)
+# Harshita Pandey (harshitap26)
+# Pooja Prasannakumar (kumarp20)
+# Prasanna Muthukumaraswamy (prablr79)
+# Shanmugapriya M (spriya-m)
+# Tarandeep Singh Gill (gilltaran)
+
+
+
+
+# for all files:
+* @bpjain2004 @francis-nijay @harishp8889 @harshitap26 @kumarp20 @prablr79 @spriya-m @gilltaran 
