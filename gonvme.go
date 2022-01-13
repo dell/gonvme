@@ -19,12 +19,16 @@
 package gonvme
 
 import (
+	"time"
+
 	"github.com/dell/gonvme/internal/logger"
 	"github.com/dell/gonvme/internal/tracer"
-	"time"
 )
 
+// Logger - Placeholder for logger
 type Logger = logger.Logger
+
+// Tracer - Placeholder for tracer
 type Tracer = tracer.Tracer
 
 // SetLogger set custom logger for gobrick
