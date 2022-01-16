@@ -173,11 +173,11 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 }
 
 // GetInitiators returns a list of initiators on the local system.
-func (iscsi *LinuxNVMe) GetInitiators(filename string) ([]string, error) {
+func (iscsi *NVMeTCP) GetInitiators(filename string) ([]string, error) {
 	return iscsi.getInitiators(filename)
 }
 
-func (iscsi *LinuxNVMe) getInitiators(filename string) ([]string, error) {
+func (iscsi *NVMeTCP) getInitiators(filename string) ([]string, error) {
 
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
