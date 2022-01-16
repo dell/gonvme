@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
 )
 
 const (
@@ -25,29 +24,24 @@ const (
 	NVMePort = "4420"
 )
 
-// LinuxNVMe provides many iSCSI-specific functions
-type LinuxNVMe struct {
+// NVMeTCP provides many iSCSI-specific functions
+type NVMeTCP struct {
 	NVMeType
-	sessionParser NVMeSessionParser
-	nodeParser    NVMeNodeParser
 }
 
 // NewLinuxNVMe returns an LinuxNVMe client
-func NewLinuxNVMe(opts map[string]string) *LinuxNVMe {
-	var nvme LinuxNVMe
-	nvme = LinuxNVMe{
+func NewNVMeTCP(opts map[string]string) *NVMeTCP {
+	nvme := NVMeTCP{
 		NVMeType: NVMeType{
 			mock:    false,
 			options: opts,
 		},
 	}
-	nvme.sessionParser = &sessionParser{}
-	nvme.nodeParser = &nodeParser{}
 
 	return &nvme
 }
 
-func (nvme *LinuxNVMe) getChrootDirectory() string {
+func (nvme *NVMeTCP) getChrootDirectory() string {
 	s := nvme.options[ChrootDirectory]
 	if s == "" {
 		s = "/"
@@ -55,23 +49,21 @@ func (nvme *LinuxNVMe) getChrootDirectory() string {
 	return s
 }
 
-func (nvme *LinuxNVMe) buildNVMeCommand(cmd []string) []string {
+func (nvme *NVMeTCP) buildNVMeCommand(cmd []string) []string {
 	if nvme.getChrootDirectory() == "/" {
 		return cmd
 	}
 	command := []string{"chroot", nvme.getChrootDirectory()}
-	for _, s := range cmd {
-		command = append(command, s)
-	}
+	command = append(command, cmd...)
 	return command
 }
 
 // DiscoverTargets runs nvme discovery and returns a list of targets.
-func (nvme *LinuxNVMe) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTCPTargets(address, login)
 }
 
-func (iscsi *LinuxNVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// iSCSI discovery is done via the iscsiadm cli
 	// iscsiadm -m discovery -t st --portal <target>
@@ -118,9 +110,10 @@ func (iscsi *LinuxNVMe) discoverNVMeTCPTargets(address string, login bool) ([]NV
 
 		case "=====Discovery":
 			// add to array
-			if entryCount!=0
+			if entryCount != 0 {
 				targets = append(targets, nvmeTarget)
-			nvmeTarget = NVMeTarget{}
+				nvmeTarget = NVMeTarget{}
+			}
 			entryCount++
 			continue
 
@@ -164,11 +157,9 @@ func (iscsi *LinuxNVMe) discoverNVMeTCPTargets(address string, login bool) ([]NV
 			break
 
 		default:
-			break
 		}
 	}
 	targets = append(targets, nvmeTarget)
-
 
 	// TODO: Add optional login
 	// log into the target if asked
@@ -214,6 +205,7 @@ func (iscsi *LinuxNVMe) getInitiators(filename string) ([]string, error) {
 		}
 
 		// get the contents of the initiator config file
+		// TODO: check if sys call is available for cat command
 		cmd := exec.Command("cat", init)
 
 		out, err := cmd.Output()
@@ -221,13 +213,12 @@ func (iscsi *LinuxNVMe) getInitiators(filename string) ([]string, error) {
 			fmt.Printf("Error gathering initiator names: %v", err)
 		}
 		lines := strings.Split(string(out), "\n")
-		for _, line := range lines {
-			nqns = append(iqns, line)
-		}
+		nqns = append(nqns, lines...)
 	}
 
-	if len(nqns)==0
+	if len(nqns) == 0 {
 		return nqns, err
+	}
 
 	return nqns, nil
 }
