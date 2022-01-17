@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// ChrootDirectory allows the iscsiadm commands to be run within a chrooted path, helpful for containerized services
+	// ChrootDirectory allows the nvme commands to be run within a chrooted path, helpful for containerized services
 	ChrootDirectory = "chrootDirectory"
 
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
@@ -21,7 +21,7 @@ const (
 	NVMePort = "4420"
 )
 
-// NVMeTCP provides many iSCSI-specific functions
+// NVMeTCP provides many nvme-specific functions
 type NVMeTCP struct {
 	NVMeType
 }
@@ -76,6 +76,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 	targets := make([]NVMeTarget, 0)
 	nvmeTarget := NVMeTarget{}
 	entryCount := 0
+	skipIteration := false
 
 	for _, line := range strings.Split(string(out), "\n") {
 		// Output should look like:
@@ -102,22 +103,29 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 		// traddr:  1.1.1.1
 		// sectype: none
 
-		tokens := strings.Split(line, " ")
+		tokens := strings.Fields(line)
+		if len(tokens) < 2 {
+			continue
+		}
 		key := tokens[0]
-		value := strings.Join(tokens[1:], "")
+		value := strings.Join(tokens[1:], " ")
 		switch key {
 
 		case "=====Discovery":
 			// add to array
-			if entryCount != 0 {
+			if entryCount != 0 && !skipIteration {
 				targets = append(targets, nvmeTarget)
-				nvmeTarget = NVMeTarget{}
 			}
+			nvmeTarget = NVMeTarget{}
+			skipIteration = false
 			entryCount++
 			continue
 
 		case "trtype:":
 			nvmeTarget.TargetType = value
+			if value == NVMeNVMeTransportTypeTCP {
+				skipIteration = true
+			}
 			break
 
 		case "traddr:":
@@ -129,27 +137,27 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 			break
 
 		case "adrfam:":
-			nvmeTarget.AdrFam = tokens[1]
+			nvmeTarget.AdrFam = value
 			break
 
 		case "subtype:":
-			nvmeTarget.SubType = tokens[1]
+			nvmeTarget.SubType = value
 			break
 
 		case "treq:":
-			nvmeTarget.Treq = tokens[1]
+			nvmeTarget.Treq = value
 			break
 
 		case "portid:":
-			nvmeTarget.PortID = tokens[1]
+			nvmeTarget.PortID = value
 			break
 
 		case "trsvcid:":
-			nvmeTarget.TrsvcID = tokens[1]
+			nvmeTarget.TrsvcID = value
 			break
 
 		case "sectype:":
-			nvmeTarget.SecType = tokens[1]
+			nvmeTarget.SecType = value
 			break
 
 		default:
@@ -158,23 +166,15 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 	}
 	targets = append(targets, nvmeTarget)
 
-	nvmeTCPTargets := make([]NVMeTarget, 0)
-
-	for _, target := range targets {
-		if target.TargetType == NVMeNVMeTransportTypeTCP {
-			nvmeTCPTargets = append(nvmeTCPTargets, target)
-		}
-	}
-
 	// TODO: Add optional login
 	// log into the target if asked
 	/*if login {
 		for _, t := range targets {
-			iscsi.PerformLogin(t)
+			gonvme.PerformLogin(t)
 		}
 	}*/
 
-	return nvmeTCPTargets, nil
+	return targets, nil
 }
 
 // GetInitiators returns a list of initiators on the local system.
@@ -190,7 +190,7 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 
 	if filename == "" {
 		// add default filename(s) here
-		// /etc/iscsi/initiatorname.iscsi is the proper file for CentOS, RedHat, Debian, Ubuntu
+		// /etc/nvme/hostnqn is the proper file for CentOS, RedHat, Sles, Ubuntu
 		if nvme.getChrootDirectory() != "/" {
 			initiatorConfig = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
 		} else {

@@ -17,7 +17,7 @@ func SetLogger(customLogger Logger) {
 	logger = customLogger
 }
 
-// Logger logging interface for gobrick
+// Logger logging interface for gonvme
 type Logger interface {
 	Info(ctx context.Context, format string, args ...interface{})
 	Debug(ctx context.Context, format string, args ...interface{})
