@@ -26,7 +26,7 @@ type NVMeTCP struct {
 	NVMeType
 }
 
-// NewLinuxNVMe returns an LinuxNVMe client
+// NewNVMeTCP - returns a new NVMeTCP client
 func NewNVMeTCP(opts map[string]string) *NVMeTCP {
 	nvme := NVMeTCP{
 		NVMeType: NVMeType{
@@ -55,7 +55,7 @@ func (nvme *NVMeTCP) buildNVMeCommand(cmd []string) []string {
 	return command
 }
 
-// DiscoverTargets runs nvme discovery and returns a list of targets.
+// DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of targets.
 func (nvme *NVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTCPTargets(address, login)
 }
@@ -162,7 +162,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 	nvmeTCPTargets := make([]NVMeTarget, 0)
 
 	for _, target := range targets {
-		if target.TargetType == NVMeTCP {
+		if target.TargetType == NVMeNVMeTransportTypeTCP {
 			nvmeTCPTargets = append(nvmeTCPTargets, target)
 		}
 	}

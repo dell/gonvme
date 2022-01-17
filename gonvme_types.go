@@ -14,10 +14,10 @@ type NVMeTarget struct {
 	TargetType string //trtype
 }
 
-// NVMeTransportName - Placeholder for NVMe Transport name
-type NVMeTransportName string
+// NVMeTransportType - Placeholder for NVMe Transport name
+type NVMeTransportType string
 
 const (
-	NVMeTCP NVMeTransportName = "tcp"
-	NVMeFC  NVMeTransportName = "fc"
+	NVMeNVMeTransportTypeTCP NVMeTransportType = "tcp"
+	NVMeNVMeTransportTypeFC  NVMeTransportType = "fc"
 )
