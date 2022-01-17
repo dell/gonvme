@@ -10,17 +10,14 @@ import (
 const (
 	// ChrootDirectory allows the iscsiadm commands to be run within a chrooted path, helpful for containerized services
 	ChrootDirectory = "chrootDirectory"
+
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 
-	// nvmeNoObjsFoundExitCode exit code indicates that no records/targets/sessions/portals
-	// found to execute operation on
-	NVMeNoObjsFoundExitCode = 21
-
-	// NVMeCommand
+	// NVMeCommand - nvme command
 	NVMeCommand = "nvme"
 
-	// NVMePort
+	// NVMePort - port number
 	NVMePort = "4420"
 )
 
@@ -63,11 +60,11 @@ func (nvme *NVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 	return nvme.discoverNVMeTCPTargets(address, login)
 }
 
-func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
-	// iSCSI discovery is done via the iscsiadm cli
-	// iscsiadm -m discovery -t st --portal <target>
-	exe := iscsi.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
+	// nvme discovery is done via nvme cli
+	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
+	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	out, err := cmd.Output()
@@ -162,11 +159,11 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 	}
 	targets = append(targets, nvmeTarget)
 
-	nvmeTcpTargets := make([]NVMeTarget, 0)
+	nvmeTCPTargets := make([]NVMeTarget, 0)
 
 	for _, target := range targets {
-		if target.TargetType == "tcp" {
-			nvmeTcpTargets = append(nvmeTcpTargets, target)
+		if target.TargetType == NVMeTCP {
+			nvmeTCPTargets = append(nvmeTCPTargets, target)
 		}
 	}
 
@@ -178,15 +175,15 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 		}
 	}*/
 
-	return nvmeTcpTargets, nil
+	return nvmeTCPTargets, nil
 }
 
 // GetInitiators returns a list of initiators on the local system.
-func (iscsi *NVMeTCP) GetInitiators(filename string) ([]string, error) {
-	return iscsi.getInitiators(filename)
+func (nvme *NVMeTCP) GetInitiators(filename string) ([]string, error) {
+	return nvme.getInitiators(filename)
 }
 
-func (iscsi *NVMeTCP) getInitiators(filename string) ([]string, error) {
+func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
@@ -195,8 +192,8 @@ func (iscsi *NVMeTCP) getInitiators(filename string) ([]string, error) {
 	if filename == "" {
 		// add default filename(s) here
 		// /etc/iscsi/initiatorname.iscsi is the proper file for CentOS, RedHat, Debian, Ubuntu
-		if iscsi.getChrootDirectory() != "/" {
-			initiatorConfig = append(initiatorConfig, iscsi.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
+		if nvme.getChrootDirectory() != "/" {
+			initiatorConfig = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
 		} else {
 			initiatorConfig = append(initiatorConfig, DefaultInitiatorNameFile)
 		}
