@@ -105,7 +105,6 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 		tokens := strings.Split(line, " ")
 		key := tokens[0]
 		value := strings.Join(tokens[1:], "")
-		fmt.Println(value)
 		switch key {
 
 		case "=====Discovery":
@@ -154,7 +153,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 			break
 
 		default:
-			fmt.Println("----------------------")
+
 		}
 	}
 	targets = append(targets, nvmeTarget)
