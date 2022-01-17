@@ -123,7 +123,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 		case "trtype:":
 			nvmeTarget.TargetType = value
-			if value == NVMeNVMeTransportTypeTCP {
+			if value != NVMeNVMeTransportTypeTCP {
 				skipIteration = true
 			}
 			break
@@ -164,7 +164,9 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 		}
 	}
-	targets = append(targets, nvmeTarget)
+	if !skipIteration {
+		targets = append(targets, nvmeTarget)
+	}
 
 	// TODO: Add optional login
 	// log into the target if asked
