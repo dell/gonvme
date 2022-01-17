@@ -79,6 +79,7 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 	targets := make([]NVMeTarget, 0)
 	nvmeTarget := NVMeTarget{}
 	entryCount := 0
+
 	for _, line := range strings.Split(string(out), "\n") {
 		// Output should look like:
 
@@ -104,9 +105,11 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 		// traddr:  1.1.1.1
 		// sectype: none
 
-		tokens := strings.Split(line, " (.+)")
-
-		switch tokens[0] {
+		tokens := strings.Split(line, " ")
+		key := tokens[0]
+		value := strings.Join(tokens[1:], "")
+		fmt.Println(value)
+		switch key {
 
 		case "=====Discovery":
 			// add to array
@@ -118,18 +121,15 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 			continue
 
 		case "trtype:":
-			if tokens[1] != "tcp" {
-				continue
-			} else {
-				break
-			}
+			nvmeTarget.TargetType = value
+			break
 
 		case "traddr:":
-			nvmeTarget.Portal = tokens[1]
+			nvmeTarget.Portal = value
 			break
 
 		case "subnqn:":
-			nvmeTarget.TargetNqn = tokens[1]
+			nvmeTarget.TargetNqn = value
 			break
 
 		case "adrfam:":
@@ -157,9 +157,18 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 			break
 
 		default:
+			fmt.Println("----------------------")
 		}
 	}
 	targets = append(targets, nvmeTarget)
+
+	nvmeTcpTargets := make([]NVMeTarget, 0)
+
+	for _, target := range targets {
+		if target.TargetType == "tcp" {
+			nvmeTcpTargets = append(nvmeTcpTargets, target)
+		}
+	}
 
 	// TODO: Add optional login
 	// log into the target if asked
@@ -169,7 +178,7 @@ func (iscsi *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 		}
 	}*/
 
-	return targets, nil
+	return nvmeTcpTargets, nil
 }
 
 // GetInitiators returns a list of initiators on the local system.
@@ -213,7 +222,13 @@ func (iscsi *NVMeTCP) getInitiators(filename string) ([]string, error) {
 			fmt.Printf("Error gathering initiator names: %v", err)
 		}
 		lines := strings.Split(string(out), "\n")
-		nqns = append(nqns, lines...)
+
+		for _, line := range lines {
+
+			if line != "" {
+				nqns = append(nqns, line)
+			}
+		}
 	}
 
 	if len(nqns) == 0 {
