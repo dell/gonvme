@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 const (
@@ -234,4 +235,69 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 	}
 
 	return nqns, nil
+}
+
+// NVMeConnect will attempt to connect into an nvme target
+func (nvme *NVMeTCP) NVMeConnect(target NVMeTarget) error {
+	return nvme.nvmeConnect(target)
+}
+
+func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
+	// nvme connect is done via the nvme cli
+	// nvme connect -t tcp -n <target NQN> -a <NVMe interface IP> -s 4420
+	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
+	cmd := exec.Command(exe[0], exe[1:]...)
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			// nvme connect exited with an exit code != 0
+			nvmeConnectResult := -1
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				nvmeConnectResult = status.ExitStatus()
+			}
+			if nvmeConnectResult == 114 {
+				// session already exists
+				// do not treat this as a failure
+				err = nil
+			} else {
+				fmt.Printf("\nnvme connect failure: %v", err)
+			}
+		} else {
+			fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+		}
+
+		if err != nil {
+			fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+			return err
+		}
+	} else {
+		fmt.Printf("\nnvme connect successful: %s", target.TargetNqn)
+	}
+
+	return nil
+}
+
+// NVMeConnect will attempt to connect into an nvme target
+func (nvme *NVMeTCP) NVMeDisonnect(target NVMeTarget) error {
+	return nvme.nvmeDisonnect(target)
+}
+
+func (nvme *NVMeTCP) nvmeDisonnect(target NVMeTarget) error {
+	// nvme disconnect is done via the nvme cli
+	// nvme disconnect -n <target NQN>
+	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
+	cmd := exec.Command(exe[0], exe[1:]...)
+
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Printf("\nError logging %s at %s: %v", target.TargetNqn, target.Portal, err)
+		return err
+	} else {
+		fmt.Printf("\nnvme disconnect successful: %s", target.TargetNqn)
+	}
+
+	return nil
 }
