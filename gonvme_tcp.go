@@ -237,7 +237,7 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 	return nqns, nil
 }
 
-// NVMeConnect will attempt to connect into an nvme target
+// NVMeConnect will attempt to connect into a given nvme target
 func (nvme *NVMeTCP) NVMeConnect(target NVMeTarget) error {
 	return nvme.nvmeConnect(target)
 }
@@ -279,7 +279,7 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 	return nil
 }
 
-// NVMeConnect will attempt to connect into an nvme target
+// NVMeDisonnect will attempt to disconnect from a given nvme target
 func (nvme *NVMeTCP) NVMeDisonnect(target NVMeTarget) error {
 	return nvme.nvmeDisonnect(target)
 }
@@ -294,10 +294,9 @@ func (nvme *NVMeTCP) nvmeDisonnect(target NVMeTarget) error {
 
 	if err != nil {
 		fmt.Printf("\nError logging %s at %s: %v", target.TargetNqn, target.Portal, err)
-		return err
 	} else {
 		fmt.Printf("\nnvme disconnect successful: %s", target.TargetNqn)
 	}
 
-	return nil
+	return err
 }
