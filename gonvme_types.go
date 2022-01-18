@@ -15,9 +15,9 @@ type NVMeTarget struct {
 }
 
 const (
-	// NVMeNVMeTransportTypeTCP - Placeholder for NVMe Transport type TCP
-	NVMeNVMeTransportTypeTCP = "tcp"
+	// NVMeTransportTypeTCP - Placeholder for NVMe Transport type TCP
+	NVMeTransportTypeTCP = "tcp"
 
-	// NVMeNVMeTransportTypeFC - Placeholder for NVMe Transport type FC
-	NVMeNVMeTransportTypeFC = "fc"
+	// NVMeTransportTypeFC - Placeholder for NVMe Transport type FC
+	NVMeTransportTypeFC = "fc"
 )

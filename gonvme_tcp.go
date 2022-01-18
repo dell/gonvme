@@ -124,7 +124,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 		case "trtype:":
 			nvmeTarget.TargetType = value
-			if value != NVMeNVMeTransportTypeTCP {
+			if value != NVMeTransportTypeTCP {
 				skipIteration = true
 			}
 			break
