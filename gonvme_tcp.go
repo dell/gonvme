@@ -165,7 +165,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 		}
 	}
-	if !skipIteration {
+	if !skipIteration && nvmeTarget.TargetNqn != "" {
 		targets = append(targets, nvmeTarget)
 	}
 
@@ -260,6 +260,7 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 			if nvmeConnectResult == 114 {
 				// session already exists
 				// do not treat this as a failure
+				fmt.Printf("\nnvme connection already exists to: %s", target.TargetNqn)
 				err = nil
 			} else {
 				fmt.Printf("\nnvme connect failure: %v", err)
