@@ -7,7 +7,7 @@ import (
 
 var tracer Tracer
 
-// Tracer  tracing interface for gobrick
+// Tracer  tracing interface for gonvme
 type Tracer interface {
 	Trace(ctx context.Context, format string, args ...interface{})
 }

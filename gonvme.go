@@ -31,12 +31,18 @@ type Logger = logger.Logger
 // Tracer - Placeholder for tracer
 type Tracer = tracer.Tracer
 
-// SetLogger set custom logger for gobrick
+// NVMeType is the base structure for each platform implementation
+type NVMeType struct {
+	mock    bool
+	options map[string]string
+}
+
+// SetLogger set custom logger for gonvme
 func SetLogger(customLogger Logger) {
 	logger.SetLogger(customLogger)
 }
 
-// SetTracer set custom tracer for gobrick
+// SetTracer set custom tracer for gonvme
 func SetTracer(customTracer Tracer) {
 	tracer.SetTracer(customTracer)
 }
@@ -47,4 +53,12 @@ func setTimeouts(prop *time.Duration, value time.Duration, defaultVal time.Durat
 	} else {
 		*prop = value
 	}
+}
+
+func (i *NVMeType) isMock() bool {
+	return i.mock
+}
+
+func (i *NVMeType) getOptions() map[string]string {
+	return i.options
 }
