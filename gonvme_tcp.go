@@ -257,7 +257,7 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 				nvmeConnectResult = status.ExitStatus()
 			}
-			if nvmeConnectResult == 114 {
+			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
 				fmt.Printf("\nnvme connection already exists to: %s", target.TargetNqn)
