@@ -20,11 +20,16 @@ const (
 
 	// NVMePort - port number
 	NVMePort = "4420"
+
+	// NVMeNoObjsFoundExitCode exit code indicates that no records/targets/sessions/portals
+	// found to execute operation on
+	NVMeNoObjsFoundExitCode = 21
 )
 
 // NVMeTCP provides many nvme-specific functions
 type NVMeTCP struct {
 	NVMeType
+	sessionParser NVMeSessionParser
 }
 
 // NewNVMeTCP - returns a new NVMeTCP client
@@ -35,7 +40,7 @@ func NewNVMeTCP(opts map[string]string) *NVMeTCP {
 			options: opts,
 		},
 	}
-
+	nvme.sessionParser = &sessionParser{}
 	return &nvme
 }
 
@@ -300,4 +305,27 @@ func (nvme *NVMeTCP) nvmeDisonnect(target NVMeTarget) error {
 	}
 
 	return err
+}
+
+// GetSessions queries information about  NVMe sessions
+func (nvme *NVMeTCP) GetSessions() ([]NVMESession, error) {
+	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
+	cmd := exec.Command(exe[0], exe[1:]...)
+	output, err := cmd.Output()
+	if err != nil {
+		if isNoObjsExitCode(err) {
+			return []NVMESession{}, nil
+		}
+		return []NVMESession{}, err
+	}
+	return nvme.sessionParser.Parse(output), nil
+}
+
+func isNoObjsExitCode(err error) bool {
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode() == NVMeNoObjsFoundExitCode
+		}
+	}
+	return false
 }
