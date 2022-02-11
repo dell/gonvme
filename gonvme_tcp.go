@@ -285,12 +285,12 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 	return nil
 }
 
-// NVMeDisonnect will attempt to disconnect from a given nvme target
-func (nvme *NVMeTCP) NVMeDisonnect(target NVMeTarget) error {
-	return nvme.nvmeDisonnect(target)
+// NVMeDisconnect will attempt to disconnect from a given nvme target
+func (nvme *NVMeTCP) NVMeDisconnect(target NVMeTarget) error {
+	return nvme.nvmeDisconnect(target)
 }
 
-func (nvme *NVMeTCP) nvmeDisonnect(target NVMeTarget) error {
+func (nvme *NVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
