@@ -307,6 +307,70 @@ func (nvme *NVMeTCP) nvmeDisonnect(target NVMeTarget) error {
 	return err
 }
 
+// ListNamespaceDevices returns the NVMe namespace Device Paths and each output content
+func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
+	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
+	cmd := exec.Command(exe[0], exe[1:]...)
+
+	output, _ := cmd.Output()
+	str := string(output)
+	lines := strings.Split(str, "\n")
+
+	var devicePaths []string
+	for _, line := range lines{
+		line = strings.ReplaceAll(strings.TrimSpace(line), ",","")
+
+		if  strings.HasPrefix(line, "\"DevicePath\"") {
+			devicePath := strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
+			devicePaths = append(devicePaths, devicePath)
+		}
+	}
+
+	namespaceDevices := make(map[string][]string)
+
+	for _, devicePath := range devicePaths {
+
+		exe := nvme.buildNVMeCommand([]string{"nvme", "list-ns", devicePath})
+		cmd := exec.Command(exe[0], exe[1:]...)
+		output, _ := cmd.Output()
+
+		str := string(output)
+		lines := strings.Split(str, "\n")
+
+		var namespaceDevice []string
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				nsDevice := strings.Split(line, ":")[1]
+				namespaceDevice = append(namespaceDevice, nsDevice)
+			}
+		}
+		namespaceDevices[devicePath] = namespaceDevice
+	}
+	return namespaceDevices
+}
+
+// GetNamespaceData returns the information of namespace specific to the namespace Id
+func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceId string) (string, error) {
+
+	var nguid string
+
+	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path, "--namespace", namespaceId})
+	cmd := exec.Command(exe[0], exe[1:]...)
+
+	output, error := cmd.Output()
+	str := string(output)
+	lines := strings.Split(str, "\n")
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "nguid") {
+			nguid = strings.TrimSpace(strings.Split(line, ":")[1])
+			return nguid, nil
+		}
+	}
+	return nguid, error
+}
+
 // GetSessions queries information about  NVMe sessions
 func (nvme *NVMeTCP) GetSessions() ([]NVMESession, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
