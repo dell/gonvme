@@ -66,15 +66,15 @@ func TestLoginLogoutTargets(t *testing.T) {
 	reset()
 	c := NewNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	err := c.NVMeConnect(tgt)
@@ -93,15 +93,15 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 	reset()
 	c := NewNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	err := c.NVMeConnect(tgt)
@@ -125,15 +125,15 @@ func TestLogoutLogoutTargets(t *testing.T) {
 	reset()
 	c := NewNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	// log out of the target, just in case we are logged in already
@@ -278,15 +278,15 @@ func TestMockLoginLogoutTargets(t *testing.T) {
 	reset()
 	c := NewMockNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	err := c.NVMeConnect(tgt)
@@ -305,15 +305,15 @@ func TestMockLogoutTargetsError(t *testing.T) {
 	reset()
 	c := NewMockNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	GONVMEMock.InduceLogoutError = true
@@ -337,15 +337,15 @@ func TestMockLoginTargetsError(t *testing.T) {
 	reset()
 	c := NewMockNVMeTCP(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:   testPortal,
-		TargetNqn:   testTarget,
-		TrType: 	"tcp",
-		AdrFam: 	"fibre-channel",
-		SubType: 	"nvme subsystem",
-		Treq: 		"not specified",
-		PortID: 	"2368",
-		TrsvcID: 	"none",
-		SecType: 	"none",
+		Portal:     testPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
 		TargetType: "tcp",
 	}
 	GONVMEMock.InduceLoginError = true
@@ -359,7 +359,6 @@ func TestMockLoginTargetsError(t *testing.T) {
 		return
 	}
 }
-
 
 func TestMockGetSessions(t *testing.T) {
 	reset()

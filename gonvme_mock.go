@@ -18,11 +18,11 @@ const (
 var (
 	// GONVMEMock is a struct controlling induced errors
 	GONVMEMock struct {
-		InduceDiscoveryError          bool
-		InduceInitiatorError          bool
-		InduceLoginError              bool
-		InduceLogoutError             bool
-		InduceGetSessionsError        bool
+		InduceDiscoveryError   bool
+		InduceInitiatorError   bool
+		InduceLoginError       bool
+		InduceLogoutError      bool
+		InduceGetSessionsError bool
 	}
 )
 
@@ -63,15 +63,15 @@ func (nvme *MockNVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]N
 		tgt := fmt.Sprintf("%05d", idx)
 		mockedTargets = append(mockedTargets,
 			NVMeTarget{
-				Portal:   	address,
+				Portal:     address,
 				TargetNqn:  "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D" + tgt,
-				TrType: 	"tcp",
-				AdrFam: 	"fibre-channel",
-				SubType: 	"nvme subsystem",
-				Treq: 		"not specified",
-				PortID: 	"2368",
-				TrsvcID: 	"none",
-				SecType: 	"none",
+				TrType:     "tcp",
+				AdrFam:     "fibre-channel",
+				SubType:    "nvme subsystem",
+				Treq:       "not specified",
+				PortID:     "2368",
+				TrsvcID:    "none",
+				SecType:    "none",
 				TargetType: "tcp",
 			})
 	}
@@ -79,7 +79,6 @@ func (nvme *MockNVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]N
 	// send back a slice of targets
 	return mockedTargets, nil
 }
-
 
 func (nvme *MockNVMeTCP) getInitiators(filename string) ([]string, error) {
 
@@ -101,7 +100,6 @@ func (nvme *MockNVMeTCP) getInitiators(filename string) ([]string, error) {
 	return mockedInitiators, nil
 }
 
-
 func (nvme *MockNVMeTCP) nvmeConnect(target NVMeTarget) error {
 
 	if GONVMEMock.InduceLoginError {
@@ -110,7 +108,6 @@ func (nvme *MockNVMeTCP) nvmeConnect(target NVMeTarget) error {
 
 	return nil
 }
-
 
 func (nvme *MockNVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 
