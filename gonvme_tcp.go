@@ -1,6 +1,7 @@
 package gonvme
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -253,7 +254,15 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
 	cmd := exec.Command(exe[0], exe[1:]...)
 
-	_, err := cmd.Output()
+	var Output string
+	stderr, _ := cmd.StderrPipe()
+	err := cmd.Start()
+
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		Output = scanner.Text()
+	}
+	err = cmd.Wait()
 
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -265,8 +274,13 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				fmt.Printf("\nnvme connection already exists to: %s", target.TargetNqn)
-				err = nil
+				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" {
+					fmt.Printf("NVMe connection already exists\n")
+					err = nil
+				} else {
+					fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+					return err
+				}
 			} else {
 				fmt.Printf("\nnvme connect failure: %v", err)
 			}

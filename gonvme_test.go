@@ -434,4 +434,3 @@ func compareStr(t *testing.T, str1 string, str2 string) {
 		t.Errorf("strings are not equal: %s != %s", str1, str2)
 	}
 }
-
