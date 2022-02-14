@@ -317,10 +317,10 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
 	lines := strings.Split(str, "\n")
 
 	var devicePaths []string
-	for _, line := range lines{
-		line = strings.ReplaceAll(strings.TrimSpace(line), ",","")
+	for _, line := range lines {
+		line = strings.ReplaceAll(strings.TrimSpace(line), ",", "")
 
-		if  strings.HasPrefix(line, "\"DevicePath\"") {
+		if strings.HasPrefix(line, "\"DevicePath\"") {
 			devicePath := strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
 			devicePaths = append(devicePaths, devicePath)
 		}
@@ -351,11 +351,11 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
 }
 
 // GetNamespaceData returns the information of namespace specific to the namespace Id
-func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceId string) (string, error) {
+func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, error) {
 
 	var nguid string
 
-	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path, "--namespace", namespaceId})
+	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path, "--namespace", namespaceID})
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	output, error := cmd.Output()
