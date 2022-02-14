@@ -132,7 +132,7 @@ func (nvme *MockNVMeTCP) getSessions() ([]NVMESession, error) {
 	for idx := 0; idx < int(count); idx++ {
 		init := fmt.Sprintf("%0d", idx)
 		session := NVMESession{}
-		session.Target = fmt.Sprintf("nqn.1988-11.com.dell:powerstore:00:e6e2d5b871f1403E169D%d", idx)
+		session.Target = fmt.Sprintf("nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D%d", idx)
 		session.Portal = fmt.Sprintf("192.168.1.%d", idx)
 		session.Name = "nvme" + init
 		session.NVMESessionState = NVMESessionStateLive
