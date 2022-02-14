@@ -69,7 +69,7 @@ func (nvme *MockNVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]N
 				AdrFam:     "fibre-channel",
 				SubType:    "nvme subsystem",
 				Treq:       "not specified",
-				PortID:     "2368",
+				PortID:     "0",
 				TrsvcID:    "none",
 				SecType:    "none",
 				TargetType: "tcp",
