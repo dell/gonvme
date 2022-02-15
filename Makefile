@@ -2,7 +2,7 @@
 # These values should be set for running the entire test suite
 # all must be valid
 Portal="1.1.1.1"
-Target="nqn.1988-11.com.dell:emc:00:e6e2d5b871f1403E169D"
+Target="nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
 
 
 all:check int-test
