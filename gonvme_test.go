@@ -405,12 +405,12 @@ func TestSessionParserParse(t *testing.T) {
 	}
 	for i, session := range sessions {
 		if i == 0 {
-			compareStr(t, session.Target, "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D")
+			compareStr(t, session.Target, "nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D")
 			compareStr(t, session.Portal, "10.230.1.1:4420")
 			compareStr(t, string(session.NVMESessionState), string(NVMESessionStateLive))
 			compareStr(t, string(session.NVMETransportName), string(NVMETransportNameTCP))
 		} else {
-			compareStr(t, session.Target, "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D")
+			compareStr(t, session.Target, "nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D")
 			compareStr(t, session.Portal, "10.230.1.2:4420")
 			compareStr(t, string(session.NVMESessionState), string(NVMESessionStateDeleting))
 			compareStr(t, string(session.NVMETransportName), string(NVMETransportNameTCP))
