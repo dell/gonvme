@@ -8,3 +8,5 @@ The following features are supported:
 * Log into a specific portal/target
 * Log out of a specific portal/target
 
+## Documentation
+For more detailed information on the driver, please refer to [Container Storage Modules documentation](https://dell.github.io/csm-docs/).
