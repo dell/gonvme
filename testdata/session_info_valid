@@ -1,0 +1,22 @@
+{
+  "Subsystems" : [
+    {
+      "Name" : "nvme-subsys0",
+      "NQN" : "nqn.1988-11.com.dell.mock:00:e6e2d5b871f1403E169D",
+      "Paths" : [
+        {
+          "Name" : "nvme0",
+          "Transport" : "tcp",
+          "Address" : "traddr=10.230.1.1 trsvcid=4420",
+          "State" : "live"
+        },
+        {
+          "Name" : "nvme1",
+          "Transport" : "tcp",
+          "Address" : "traddr=10.230.1.2 trsvcid=4420",
+          "State" : "deleting"
+        }
+      ]
+    }
+  ]
+}

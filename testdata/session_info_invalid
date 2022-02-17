@@ -1,0 +1,4 @@
+Current Portal: 192.168.1.1:4420,1
+
+nvme0 tcp traddr=10.230.42.113 trsvcid=4420 live
+nvme1 tcp traddr=10.230.42.114 trsvcid=4420 live
