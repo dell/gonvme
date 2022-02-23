@@ -322,7 +322,7 @@ func (nvme *NVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 }
 
 // ListNamespaceDevices returns the NVMe namespace Device Paths and each output content
-func (nvme *NVMeTCP) ListNamespaceDevices() map[devicePathAndNamespace][]string {
+func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
 
 	/* nvme list -o json
@@ -361,8 +361,8 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[devicePathAndNamespace][]string 
 	str := string(output)
 	lines := strings.Split(str, "\n")
 
-	var result []devicePathAndNamespace
-	var currentPathAndNamespace *devicePathAndNamespace
+	var result []DevicePathAndNamespace
+	var currentPathAndNamespace *DevicePathAndNamespace
 	var devicePath string
 	var namespace string
 
@@ -380,7 +380,7 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[devicePathAndNamespace][]string 
 			if len(strings.Split(line, ":")) >= 2 {
 				devicePath = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
 
-				PathAndNamespace := devicePathAndNamespace{}
+				PathAndNamespace := DevicePathAndNamespace{}
 				PathAndNamespace.namespace = namespace
 				PathAndNamespace.devicePath = devicePath
 
@@ -395,12 +395,12 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[devicePathAndNamespace][]string 
 		result = append(result, *currentPathAndNamespace)
 	}
 
-	namespaceDevices := make(map[devicePathAndNamespace][]string)
+	namespaceDevices := make(map[DevicePathAndNamespace][]string)
 
 	for _, devicePathAndNamespace := range result {
 
-		devicePath = devicePathAndNamespace.devicePath
-		namespace = devicePathAndNamespace.namespace
+		devicePath = devicePathAndNamespace.DevicePath
+		namespace = devicePathAndNamespace.Namespace
 
 		exe := nvme.buildNVMeCommand([]string{"nvme", "list-ns", devicePath})
 		/* nvme list-ns /dev/nvme0n1
