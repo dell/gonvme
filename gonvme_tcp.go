@@ -322,7 +322,7 @@ func (nvme *NVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 }
 
 // ListNamespaceDevices returns the NVMe namespace Device Paths and each output content
-func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
+func (nvme *NVMeTCP) ListNamespaceDevices() map[devicePathAndNamespace][]string {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
 
 	/* nvme list -o json
@@ -361,21 +361,46 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
 	str := string(output)
 	lines := strings.Split(str, "\n")
 
-	var devicePaths []string
+	var result []devicePathAndNamespace
+	var currentPathAndNamespace *devicePathAndNamespace
+	var devicePath string
+	var namespace string
+
 	for _, line := range lines {
+
 		line = strings.ReplaceAll(strings.TrimSpace(line), ",", "")
 
-		if strings.HasPrefix(line, "\"DevicePath\"") {
+		switch {
+		case strings.HasPrefix(line, "\"NameSpace\""):
 			if len(strings.Split(line, ":")) >= 2 {
-				devicePath := strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
-				devicePaths = append(devicePaths, devicePath)
+				namespace = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
+			}
+
+		case strings.HasPrefix(line, "\"DevicePath\""):
+			if len(strings.Split(line, ":")) >= 2 {
+				devicePath = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
+
+				PathAndNamespace := devicePathAndNamespace{}
+				PathAndNamespace.namespace = namespace
+				PathAndNamespace.devicePath = devicePath
+
+				if currentPathAndNamespace != nil {
+					result = append(result, *currentPathAndNamespace)
+				}
+				currentPathAndNamespace = &PathAndNamespace
 			}
 		}
 	}
+	if currentPathAndNamespace != nil {
+		result = append(result, *currentPathAndNamespace)
+	}
 
-	namespaceDevices := make(map[string][]string)
+	namespaceDevices := make(map[devicePathAndNamespace][]string)
 
-	for _, devicePath := range devicePaths {
+	for _, devicePathAndNamespace := range result {
+
+		devicePath = devicePathAndNamespace.devicePath
+		namespace = devicePathAndNamespace.namespace
 
 		exe := nvme.buildNVMeCommand([]string{"nvme", "list-ns", devicePath})
 		/* nvme list-ns /dev/nvme0n1
@@ -398,15 +423,16 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[string][]string {
 				}
 			}
 		}
-		namespaceDevices[devicePath] = namespaceDevice
+		namespaceDevices[devicePathAndNamespace] = namespaceDevice
 	}
 	return namespaceDevices
 }
 
 // GetNamespaceData returns the information of namespace specific to the namespace Id
-func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, error) {
+func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, string, error) {
 
 	var nguid string
+	var namespace string
 
 	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path, "--namespace", namespaceID})
 	cmd := exec.Command(exe[0], exe[1:]...)
@@ -420,10 +446,18 @@ func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, 
 			if len(strings.Split(line, ":")) >= 2 {
 				nguid = strings.TrimSpace(strings.Split(line, ":")[1])
 			}
-			return nguid, nil
+		}
+		if strings.HasPrefix(line, "NVME Identify Namespace") {
+			if len(strings.Fields(line)) >= 4 {
+				namespace = strings.ReplaceAll(strings.TrimSpace(strings.Fields(line)[3]), ":", "")
+			}
+		}
+
+		if nguid != "" && namespace != "" {
+			return nguid, namespace, nil
 		}
 	}
-	return nguid, error
+	return nguid, namespace, error
 }
 
 // GetSessions queries information about  NVMe sessions
