@@ -381,8 +381,8 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string 
 				devicePath = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
 
 				PathAndNamespace := DevicePathAndNamespace{}
-				PathAndNamespace.namespace = Namespace
-				PathAndNamespace.devicePath = DevicePath
+				PathAndNamespace.Namespace = namespace
+				PathAndNamespace.DevicePath = devicePath
 
 				if currentPathAndNamespace != nil {
 					result = append(result, *currentPathAndNamespace)
