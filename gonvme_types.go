@@ -42,6 +42,12 @@ const (
 	NVMETransportNameRDMA NVMETransportName = "rdma"
 )
 
+// DevicePathAndNamespace  defines the device path and namespace of a device
+type DevicePathAndNamespace struct {
+	DevicePath string
+	Namespace  string
+}
+
 // NVMESession defines an iSCSI session info
 type NVMESession struct {
 	Target            string
