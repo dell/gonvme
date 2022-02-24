@@ -403,7 +403,7 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string 
 	{/dev/nvme0n2 55} [0x36 0x37]
 	{/dev/nvme1n1 54} [0x36 0x37]
 	{/dev/nvme1n2 55} [0x36 0x37]
-	 */
+	*/
 
 	for _, devicePathAndNamespace := range result {
 
@@ -446,40 +446,40 @@ func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, 
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	/*
-	nvme id-ns /dev/nvme3n1 0x95
-	NVME Identify Namespace 149:
-	nsze    : 0x1000000
-	ncap    : 0x1000000
-	nuse    : 0x223b8
-	nsfeat  : 0xb
-	nlbaf   : 0
-	flbas   : 0
-	mc      : 0
-	dpc     : 0
-	dps     : 0
-	nmic    : 0x1
-	rescap  : 0xff
-	fpi     : 0
-	dlfeat  : 9
-	nawun   : 2047
-	nawupf  : 2047
-	nacwu   : 0
-	nabsn   : 2047
-	nabo    : 0
-	nabspf  : 2047
-	noiob   : 0
-	nvmcap  : 0
-	mssrl   : 0
-	mcl     : 0
-	msrc    : 0
-	anagrpid: 2
-	nsattr  : 0
-	nvmsetid: 0
-	endgid  : 0
-	nguid   : 507911ecda65a2498ccf0968009a5d07
-	eui64   : 0000000000000000
-	lbaf  0 : ms:0   lbads:9  rp:0 (in use)
-	 */
+		nvme id-ns /dev/nvme3n1 0x95
+		NVME Identify Namespace 149:
+		nsze    : 0x1000000
+		ncap    : 0x1000000
+		nuse    : 0x223b8
+		nsfeat  : 0xb
+		nlbaf   : 0
+		flbas   : 0
+		mc      : 0
+		dpc     : 0
+		dps     : 0
+		nmic    : 0x1
+		rescap  : 0xff
+		fpi     : 0
+		dlfeat  : 9
+		nawun   : 2047
+		nawupf  : 2047
+		nacwu   : 0
+		nabsn   : 2047
+		nabo    : 0
+		nabspf  : 2047
+		noiob   : 0
+		nvmcap  : 0
+		mssrl   : 0
+		mcl     : 0
+		msrc    : 0
+		anagrpid: 2
+		nsattr  : 0
+		nvmsetid: 0
+		endgid  : 0
+		nguid   : 507911ecda65a2498ccf0968009a5d07
+		eui64   : 0000000000000000
+		lbaf  0 : ms:0   lbads:9  rp:0 (in use)
+	*/
 
 	output, error := cmd.Output()
 	str := string(output)
