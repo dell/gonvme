@@ -274,7 +274,7 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" {
+				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
 					fmt.Printf("NVMe connection already exists\n")
 					err = nil
 				} else {
