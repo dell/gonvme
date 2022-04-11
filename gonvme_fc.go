@@ -208,7 +208,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 
 			case "=====Discovery":
 				// add to array
-				if entryCount != 0 && !skipIteration {
+				if entryCount != 0 && !skipIteration && nvmeTarget.Portal == targetAddress {
 					targets = append(targets, nvmeTarget)
 				}
 				nvmeTarget = NVMeTarget{}
@@ -258,7 +258,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 
 			}
 		}
-		if !skipIteration && nvmeTarget.TargetNqn != "" {
+		if !skipIteration && nvmeTarget.TargetNqn != "" && nvmeTarget.Portal == targetAddress {
 			targets = append(targets, nvmeTarget)
 		}
 	}
@@ -356,17 +356,4 @@ func (nvme *NVMeFC) GetSessions() ([]NVMESession, error) {
 		return []NVMESession{}, err
 	}
 	return nvme.sessionParser.Parse(output), nil
-}
-
-// ifNVVMeFCDiscover checks if the NVMe/FC discover and connect is possible with the given initiator and target address
-func (nvme *NVMeFC) ifNVVMeFCDiscover(initiatorAddress string, targetAddress string) bool {
-
-	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
-	cmd := exec.Command(exe[0], exe[1:]...)
-
-	_, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	return true
 }
