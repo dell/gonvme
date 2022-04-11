@@ -38,8 +38,12 @@ func (sp *sessionParser) Parse(data []byte) []NVMESession {
 
 		case regexp.MustCompile("^\"Address\"").Match([]byte(line)):
 			targetIP := strings.Split(strings.Fields(line)[2], "=")[1]
-			targetPortal := strings.ReplaceAll(strings.Split(strings.Fields(line)[3], "=")[1], "\"", "")
-			curSession.Portal = targetIP + ":" + targetPortal
+			if strings.Split(strings.Fields(line)[3], "=")[0] == "host_traddr" {
+				curSession.Portal = targetIP
+			} else {
+				targetPortal := strings.ReplaceAll(strings.Split(strings.Fields(line)[3], "=")[1], "\"", "")
+				curSession.Portal = targetIP + ":" + targetPortal
+			}
 
 		case regexp.MustCompile("^\"State\"").Match([]byte(line)):
 			curSession.NVMESessionState = NVMESessionState(strings.ReplaceAll(strings.Fields(line)[2], "\"", ""))

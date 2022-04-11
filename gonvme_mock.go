@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -26,14 +27,14 @@ var (
 	}
 )
 
-// MockNVMeTCP provides a mock implementation of an NVMe client
-type MockNVMeTCP struct {
+// MockNVMe provides a mock implementation of an NVMe client
+type MockNVMe struct {
 	NVMeType
 }
 
-// NewMockNVMeTCP - returns a mock NVMeTCP client
-func NewMockNVMeTCP(opts map[string]string) *MockNVMeTCP {
-	nvme := MockNVMeTCP{
+// NewMockNVMe - returns a mock NVMe client
+func NewMockNVMe(opts map[string]string) *MockNVMe {
+	nvme := MockNVMe{
 		NVMeType: NVMeType{
 			mock:    true,
 			options: opts,
@@ -48,7 +49,7 @@ func getOptionAsInt(opts map[string]string, key string) int64 {
 	return v
 }
 
-func (nvme *MockNVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *MockNVMe) discoverNVMeTargets(address string, login bool) ([]NVMeTarget, error) {
 	if GONVMEMock.InduceDiscoveryError {
 		return []NVMeTarget{}, errors.New("discoverTargets induced error")
 	}
@@ -59,28 +60,48 @@ func (nvme *MockNVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]N
 		count = 1
 	}
 
-	for idx := 0; idx < int(count); idx++ {
-		tgt := fmt.Sprintf("%05d", idx)
-		mockedTargets = append(mockedTargets,
-			NVMeTarget{
-				Portal:     address,
-				TargetNqn:  "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D" + tgt,
-				TrType:     "tcp",
-				AdrFam:     "fibre-channel",
-				SubType:    "nvme subsystem",
-				Treq:       "not specified",
-				PortID:     "0",
-				TrsvcID:    "none",
-				SecType:    "none",
-				TargetType: "tcp",
-			})
+	if strings.HasPrefix(address, "nn-") {
+		for idx := 0; idx < int(count); idx++ {
+			tgt := fmt.Sprintf("%05d", idx)
+			mockedTargets = append(mockedTargets,
+				NVMeTarget{
+					Portal:     address,
+					TargetNqn:  "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D" + tgt,
+					TrType:     "fc",
+					AdrFam:     "fibre-channel",
+					SubType:    "nvme subsystem",
+					Treq:       "not specified",
+					PortID:     "0",
+					TrsvcID:    "none",
+					SecType:    "none",
+					TargetType: "fc",
+					HostAdr:    "nn-0x58aaa11111111a11:pn-0x58aaa11111111a11",
+				})
+		}
+	} else {
+		for idx := 0; idx < int(count); idx++ {
+			tgt := fmt.Sprintf("%05d", idx)
+			mockedTargets = append(mockedTargets,
+				NVMeTarget{
+					Portal:     address,
+					TargetNqn:  "nqn.1988-11.com.dell.mock:e6e2d5b871f1403E169D" + tgt,
+					TrType:     "tcp",
+					AdrFam:     "ipv4",
+					SubType:    "nvme subsystem",
+					Treq:       "not specified",
+					PortID:     "0",
+					TrsvcID:    "none",
+					SecType:    "none",
+					TargetType: "tcp",
+				})
+		}
 	}
 
 	// send back a slice of targets
 	return mockedTargets, nil
 }
 
-func (nvme *MockNVMeTCP) getInitiators(filename string) ([]string, error) {
+func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
 
 	if GONVMEMock.InduceInitiatorError {
 		return []string{}, errors.New("getInitiators induced error")
@@ -100,7 +121,7 @@ func (nvme *MockNVMeTCP) getInitiators(filename string) ([]string, error) {
 	return mockedInitiators, nil
 }
 
-func (nvme *MockNVMeTCP) nvmeConnect(target NVMeTarget) error {
+func (nvme *MockNVMe) nvmeConnect(target NVMeTarget) error {
 
 	if GONVMEMock.InduceLoginError {
 		return errors.New("NVMe Login induced error")
@@ -109,7 +130,7 @@ func (nvme *MockNVMeTCP) nvmeConnect(target NVMeTarget) error {
 	return nil
 }
 
-func (nvme *MockNVMeTCP) nvmeDisconnect(target NVMeTarget) error {
+func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
 
 	if GONVMEMock.InduceLogoutError {
 		return errors.New("NVMe Logout induced error")
@@ -118,7 +139,7 @@ func (nvme *MockNVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 	return nil
 }
 
-func (nvme *MockNVMeTCP) getSessions() ([]NVMESession, error) {
+func (nvme *MockNVMe) getSessions() ([]NVMESession, error) {
 
 	if GONVMEMock.InduceGetSessionsError {
 		return []NVMESession{}, errors.New("getSessions induced error")
@@ -145,27 +166,27 @@ func (nvme *MockNVMeTCP) getSessions() ([]NVMESession, error) {
 // ====================================================================
 // Architecture agnostic code for the mock implementation
 
-// DiscoverNVMeTCPTargets runs an NVMe discovery and returns a list of targets.
-func (nvme *MockNVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
-	return nvme.discoverNVMeTCPTargets(address, login)
+// DiscoverNVMeTargets runs an NVMe discovery and returns a list of targets.
+func (nvme *MockNVMe) DiscoverNVMeTargets(address string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeTargets(address, login)
 }
 
 // GetInitiators returns a list of NVMe initiators on the local system.
-func (nvme *MockNVMeTCP) GetInitiators(filename string) ([]string, error) {
+func (nvme *MockNVMe) GetInitiators(filename string) ([]string, error) {
 	return nvme.getInitiators(filename)
 }
 
 // NVMeConnect will attempt to log into an NVMe target
-func (nvme *MockNVMeTCP) NVMeConnect(target NVMeTarget) error {
+func (nvme *MockNVMe) NVMeConnect(target NVMeTarget) error {
 	return nvme.nvmeConnect(target)
 }
 
 // NVMeDisconnect will attempt to log out of an NVMe target
-func (nvme *MockNVMeTCP) NVMeDisconnect(target NVMeTarget) error {
+func (nvme *MockNVMe) NVMeDisconnect(target NVMeTarget) error {
 	return nvme.nvmeDisconnect(target)
 }
 
 // GetSessions Queries NVMe session info
-func (nvme *MockNVMeTCP) GetSessions() ([]NVMESession, error) {
+func (nvme *MockNVMe) GetSessions() ([]NVMESession, error) {
 	return nvme.getSessions()
 }

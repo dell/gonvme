@@ -62,12 +62,12 @@ func (nvme *NVMeTCP) buildNVMeCommand(cmd []string) []string {
 	return command
 }
 
-// DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of targets.
-func (nvme *NVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
-	return nvme.discoverNVMeTCPTargets(address, login)
+// DiscoverNVMeTargets - runs nvme discovery and returns a list of targets.
+func (nvme *NVMeTCP) DiscoverNVMeTargets(address string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeTargets(address, login)
 }
 
-func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMeTCP) discoverNVMeTargets(address string, login bool) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
@@ -76,7 +76,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("\nError discovering %s: %v", address, err)
+		fmt.Printf("\nError discovering %s: %v \n", address, err)
 		return []NVMeTarget{}, err
 	}
 

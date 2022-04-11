@@ -12,6 +12,7 @@ type NVMeTarget struct {
 	TrsvcID    string //trsvcid
 	SecType    string //sectype
 	TargetType string //trtype
+	HostAdr    string //host_traddr
 }
 
 //NVMESessionState defines the NVMe connection state
@@ -48,7 +49,7 @@ type DevicePathAndNamespace struct {
 	Namespace  string
 }
 
-// NVMESession defines an iSCSI session info
+// NVMESession defines an NVMe session info
 type NVMESession struct {
 	Target            string
 	Portal            string
@@ -60,4 +61,10 @@ type NVMESession struct {
 // NVMeSessionParser defines an NVMe session parser
 type NVMeSessionParser interface {
 	Parse([]byte) []NVMESession
+}
+
+// FCHBAInfo holds information about host NVMe/FC ports
+type FCHBAInfo struct {
+	PortName string
+	NodeName string
 }

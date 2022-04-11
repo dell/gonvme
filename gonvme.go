@@ -31,12 +31,12 @@ type Logger = logger.Logger
 // Tracer - Placeholder for tracer
 type Tracer = tracer.Tracer
 
-// NVMEinterface is the interface that provides the iSCSI client functionality
+// NVMEinterface is the interface that provides the NVMe client functionality
 type NVMEinterface interface {
 
-	// DiscoverNVMeTCPTargets discovers the targets exposed via a given portal
-	// returns an array of ISCSITarget instances
-	DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error)
+	// DiscoverNVMeTargets discovers the targets exposed via a given portal
+	// returns an array of NVMe Target instances
+	DiscoverNVMeTargets(address string, login bool) ([]NVMeTarget, error)
 
 	// GetInitiators get a list of iSCSI initiators defined in a specified file
 	// To use the system default file of "/etc/nvme/hostnqn", provide a filename of ""
