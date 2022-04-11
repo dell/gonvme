@@ -3,10 +3,10 @@ package gonvme
 import (
 	"fmt"
 	"io/ioutil"
-	"path"
-	"path/filepath"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -137,7 +137,6 @@ func (nvme *NVMeFC) getInitiators(filename string) ([]string, error) {
 	return nqns, nil
 }
 
-
 // DiscoverNVMeTargets - runs NVMe/FC discovery and returns a list of targets.
 func (nvme *NVMeFC) DiscoverNVMeTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTargets(targetAddress, login)
@@ -209,7 +208,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 
 			case "=====Discovery":
 				// add to array
-				if entryCount !=0 && !skipIteration {
+				if entryCount != 0 && !skipIteration {
 					targets = append(targets, nvmeTarget)
 				}
 				nvmeTarget = NVMeTarget{}
