@@ -10,9 +10,9 @@ import (
 
 var (
 	tcpTestPortal string
-	fcTestPortal string
-	testTarget string
-	hostAddress string
+	fcTestPortal  string
+	testTarget    string
+	hostAddress   string
 )
 
 func reset() {
@@ -148,7 +148,7 @@ func TestNVMeFCLoginLogoutTargets(t *testing.T) {
 		TrsvcID:    "none",
 		SecType:    "none",
 		TargetType: "fc",
-		HostAdr:	 hostAddress,
+		HostAdr:    hostAddress,
 	}
 
 	err := c.NVMeConnect(tgt)
