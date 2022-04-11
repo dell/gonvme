@@ -3,10 +3,10 @@ package gonvme
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
+	"os"
+	"os/exec"
 	"strings"
 	"syscall"
 )
@@ -137,6 +137,7 @@ func (nvme *NVMeFC) getInitiators(filename string) ([]string, error) {
 	return nqns, nil
 }
 
+
 // DiscoverNVMeTargets - runs NVMe/FC discovery and returns a list of targets.
 func (nvme *NVMeFC) DiscoverNVMeTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTargets(targetAddress, login)
@@ -158,6 +159,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 	targets := make([]NVMeTarget, 0)
 	for _, FCHostInfo := range FCHostsInfo {
 
+		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
 		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
 		cmd := exec.Command(exe[0], exe[1:]...)
@@ -207,7 +209,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 
 			case "=====Discovery":
 				// add to array
-				if entryCount != 0 && !skipIteration {
+				if entryCount !=0 && !skipIteration {
 					targets = append(targets, nvmeTarget)
 				}
 				nvmeTarget = NVMeTarget{}
@@ -285,7 +287,8 @@ func (nvme *NVMeFC) NVMeConnect(target NVMeTarget) error {
 
 func (nvme *NVMeFC) nvmeConnect(target NVMeTarget) error {
 	// nvme connect is done via the nvme cli
-	// nvme connect -t tcp -n <target NQN> -a <NVMe interface IP> -s 4420
+	// nvme connect -t fc -a traddr -w host_traddr -n target_nqn
+	// where traddr = nn-<Target_WWNN>:pn-<Target_WWPN> and host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
 	cmd := exec.Command(exe[0], exe[1:]...)
 	_, err := cmd.Output()
