@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // NVMeFC provides many nvme/fc-specific functions
@@ -50,7 +52,7 @@ func (nvme *NVMeFC) getFCHostInfo() ([]FCHBAInfo, error) {
 
 	match, err := filepath.Glob("/sys/class/fc_host/host*")
 	if err != nil {
-		fmt.Printf("Error gathering fc hosts: %v", err)
+		log.Infof("Error gathering fc hosts: %v", err)
 		return []FCHBAInfo{}, err
 	}
 
@@ -60,14 +62,14 @@ func (nvme *NVMeFC) getFCHostInfo() ([]FCHBAInfo, error) {
 		var FCHostInfo FCHBAInfo
 		data, err := ioutil.ReadFile(path.Join(m, "port_name"))
 		if err != nil {
-			fmt.Printf("match: %s failed to read port_name file: %s", match, err.Error())
+			log.Infof("match: %s failed to read port_name file: %s", match, err.Error())
 			continue
 		}
 		FCHostInfo.PortName = strings.TrimSpace(string(data))
 
 		data, err = ioutil.ReadFile(path.Join(m, "node_name"))
 		if err != nil {
-			fmt.Printf("match: %s failed to read node_name file: %s", match, err.Error())
+			log.Infof("match: %s failed to read node_name file: %s", match, err.Error())
 			continue
 		}
 		FCHostInfo.NodeName = strings.TrimSpace(string(data))
@@ -118,7 +120,7 @@ func (nvme *NVMeFC) getInitiators(filename string) ([]string, error) {
 
 		out, err := cmd.Output()
 		if err != nil {
-			fmt.Printf("Error gathering initiator names: %v", err)
+			log.Infof("Error gathering initiator names: %v", err)
 		}
 		lines := strings.Split(string(out), "\n")
 
@@ -151,7 +153,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 	var out []byte
 	FCHostsInfo, err := nvme.getFCHostInfo()
 	if err != nil {
-		fmt.Printf("Error gathering NVMe/FC Hosts on the host side: %v", err)
+		log.Infof("Error gathering NVMe/FC Hosts on the host side: %v", err)
 		return []NVMeTarget{}, nil
 	}
 
@@ -264,7 +266,7 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 	}
 
 	if len(targets) == 0 {
-		fmt.Printf("\n Error discovering NVMe/FC targets: %s", err)
+		log.Infof("Error discovering NVMe/FC targets: %s", err)
 		return []NVMeTarget{}, err
 	}
 
@@ -302,21 +304,21 @@ func (nvme *NVMeFC) nvmeConnect(target NVMeTarget) error {
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				fmt.Printf("NVMe/FC connection already exists\n")
+				log.Infof("NVMe/FC connection already exists\n")
 				err = nil
 			} else {
-				fmt.Printf("\nnvme connect failure: %v", err)
+				log.Infof("NVMe/FC connect failure: %v", err)
 			}
 		} else {
-			fmt.Printf("\nError during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+			log.Infof("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
 		}
 
 		if err != nil {
-			fmt.Printf("\nError during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+			log.Infof("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
 			return err
 		}
 	} else {
-		fmt.Printf("\nNVMe/FC connect successful: %s", target.TargetNqn)
+		log.Infof("NVMe/FC connect successful: %s", target.TargetNqn)
 	}
 
 	return nil
@@ -336,9 +338,9 @@ func (nvme *NVMeFC) nvmeDisconnect(target NVMeTarget) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Printf("\nError logging %s at %s: %v", target.TargetNqn, target.Portal, err)
+		log.Infof("Error logging %s at %s: %v", target.TargetNqn, target.Portal, err)
 	} else {
-		fmt.Printf("\nnvme disconnect successful: %s", target.TargetNqn)
+		log.Infof("NVMe/FC disconnect successful: %s", target.TargetNqn)
 	}
 
 	return err
