@@ -266,17 +266,20 @@ func (nvme *NVMeFC) discoverNVMeTargets(targetAddress string, login bool) ([]NVM
 	}
 
 	if len(targets) == 0 {
-		log.Infof("Error discovering NVMe/FC targets: %s", err)
+		log.Infof("Error discovering NVMe/FC targets: %v", err)
 		return []NVMeTarget{}, err
 	}
 
 	// TODO: Add optional login
 	// log into the target if asked
-	/*if login {
+	if login {
 		for _, t := range targets {
-			gonvme.PerformLogin(t)
+			err = nvme.nvmeConnect(t)
+			if err != nil {
+				log.Infof("Error during nvme connect")
+			}
 		}
-	}*/
+	}
 
 	return targets, nil
 }
