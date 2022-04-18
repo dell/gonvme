@@ -6,8 +6,7 @@ mock-test:
 	go test -v -coverprofile=c.out --run=TestMock
 
 int-test:
-	GONVMETCP_PORTAL=$(TCPPortal) GONVME_TARGET=$(Target) GONVMEFC_PORTAL=$(FCPortal) GONVMEFC_HostAddress=$(FCHostAddress) \
-		 go test -v -timeout 20m -coverprofile=c.out -coverpkg ./...
+	go test -v -timeout 20m -coverprofile=c.out -coverpkg ./...
 
 gocover:
 	go tool cover -html=c.out
