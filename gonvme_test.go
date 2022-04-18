@@ -1,53 +1,6 @@
 package gonvme
 
 import (
-	"fmt"
-	"testing"
-)
-
-func Test_NVMe(t *testing.T) {
-
-	fmt.Println("Welcome to the test function")
-
-	NVMeOpts := make(map[string]string)
-	NVMeOpts["chrootDirectory"] = ""
-
-	nvmeLib := NewNVMeFC(NVMeOpts)
-
-	nvmeInitiators, err := nvmeLib.GetInitiators("/etc/nvme/hostnqn")
-
-	if err != nil {
-		fmt.Printf("Error generating the initiators\n")
-	}
-
-	for _, initiator := range nvmeInitiators {
-		fmt.Println("Found target:", initiator)
-	}
-
-	fmt.Println("============================")
-	FCHostInfo, err := nvmeLib.getFCHostInfo()
-
-	if err != nil {
-		fmt.Printf("Error generating the targets\n")
-	}
-
-	for _, temp := range FCHostInfo {
-		fmt.Printf("FCHost Node Name: %s", temp.NodeName)
-		fmt.Printf("FCHost Port Name: %s\n", temp.PortName)
-	}
-
-	namespaceDevices := nvmeLib.ListNamespaceDevices()
-	for path, _ := range namespaceDevices {
-		fmt.Println(path, namespaceDevices[path])
-	}
-	nguid, namespace, _ := nvmeLib.GetNamespaceData("/dev/nvme7n1", "0x216")
-	fmt.Println(nguid)
-	fmt.Println(namespace)
-}
-
-/*package gonvme
-
-import (
 	"encoding/json"
 	"fmt"
 	log "github.com/sirupsen/logrus"
@@ -57,10 +10,10 @@ import (
 )
 
 type testData struct {
-	TCPPortal 		string
-	FCPortal  		string
-	Target    	  	string
-	FCHostAddress 	string
+	TCPPortal     string
+	FCPortal      string
+	Target        string
+	FCHostAddress string
 }
 
 var (
@@ -674,5 +627,3 @@ func compareStr(t *testing.T, str1 string, str2 string) {
 		t.Errorf("strings are not equal: %s != %s", str1, str2)
 	}
 }
-
-*/
