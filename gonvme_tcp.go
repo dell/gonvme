@@ -3,6 +3,7 @@ package gonvme
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -219,10 +220,7 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 		}
 
 		// get the contents of the initiator config file
-		// TODO: check if sys call is available for cat command
-		cmd := exec.Command("cat", init)
-
-		out, err := cmd.Output()
+		out, err := ioutil.ReadFile(init)
 		if err != nil {
 			fmt.Printf("Error gathering initiator names: %v", err)
 		}
