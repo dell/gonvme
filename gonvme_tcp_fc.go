@@ -6,8 +6,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -28,15 +32,15 @@ const (
 	NVMeNoObjsFoundExitCode = 21
 )
 
-// NVMeTCP provides many nvme-specific functions
-type NVMeTCP struct {
+// NVMe provides many nvme-specific functions
+type NVMe struct {
 	NVMeType
 	sessionParser NVMeSessionParser
 }
 
-// NewNVMeTCP - returns a new NVMeTCP client
-func NewNVMeTCP(opts map[string]string) *NVMeTCP {
-	nvme := NVMeTCP{
+// NewNVMe - returns a new NVMe client
+func NewNVMe(opts map[string]string) *NVMe {
+	nvme := NVMe{
 		NVMeType: NVMeType{
 			mock:    false,
 			options: opts,
@@ -46,7 +50,7 @@ func NewNVMeTCP(opts map[string]string) *NVMeTCP {
 	return &nvme
 }
 
-func (nvme *NVMeTCP) getChrootDirectory() string {
+func (nvme *NVMe) getChrootDirectory() string {
 	s := nvme.options[ChrootDirectory]
 	if s == "" {
 		s = "/"
@@ -54,7 +58,7 @@ func (nvme *NVMeTCP) getChrootDirectory() string {
 	return s
 }
 
-func (nvme *NVMeTCP) buildNVMeCommand(cmd []string) []string {
+func (nvme *NVMe) buildNVMeCommand(cmd []string) []string {
 	if nvme.getChrootDirectory() == "/" {
 		return cmd
 	}
@@ -63,12 +67,46 @@ func (nvme *NVMeTCP) buildNVMeCommand(cmd []string) []string {
 	return command
 }
 
-// DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of targets.
-func (nvme *NVMeTCP) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
+
+	match, err := filepath.Glob("/sys/class/fc_host/host*")
+	if err != nil {
+		log.Errorf("Error gathering fc hosts: %v", err)
+		return []FCHBAInfo{}, err
+	}
+
+	var FCHostsInfo []FCHBAInfo
+	for _, m := range match {
+
+		var FCHostInfo FCHBAInfo
+		data, err := ioutil.ReadFile(path.Join(m, "port_name"))
+		if err != nil {
+			log.Errorf("match: %s failed to read port_name file: %s", match, err.Error())
+			continue
+		}
+		FCHostInfo.PortName = strings.TrimSpace(string(data))
+
+		data, err = ioutil.ReadFile(path.Join(m, "node_name"))
+		if err != nil {
+			log.Errorf("match: %s failed to read node_name file: %s", match, err.Error())
+			continue
+		}
+		FCHostInfo.NodeName = strings.TrimSpace(string(data))
+		FCHostsInfo = append(FCHostsInfo, FCHostInfo)
+	}
+
+	if len(FCHostsInfo) == 0 {
+		return []FCHBAInfo{}, err
+	}
+	return FCHostsInfo, nil
+}
+
+// DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of NVMeTCP targets.
+func (nvme *NVMe) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTCPTargets(address, login)
 }
 
-func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
@@ -77,7 +115,7 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Printf("\nError discovering %s: %v", address, err)
+		log.Errorf("\nError discovering %s: %v", address, err)
 		return []NVMeTarget{}, err
 	}
 
@@ -178,21 +216,169 @@ func (nvme *NVMeTCP) discoverNVMeTCPTargets(address string, login bool) ([]NVMeT
 
 	// TODO: Add optional login
 	// log into the target if asked
-	/*if login {
+	if login {
 		for _, t := range targets {
-			gonvme.PerformLogin(t)
+			err = nvme.NVMeTCPConnect(t)
+			if err != nil {
+				log.Errorf("Error during NVMeTCP connect")
+			}
 		}
-	}*/
+	}
+
+	return targets, nil
+}
+
+// DiscoverNVMeFCTargets - runs nvme discovery and returns a list of NVMeFC targets.
+func (nvme *NVMe) DiscoverNVMeFCTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeFCTargets(targetAddress, login)
+}
+
+func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
+	// TODO: add injection check on address
+	// nvme discovery is done via nvme cli
+	// nvme discover -t fc -a traddr -w host_traddr
+	// where traddr = nn-<Target_WWNN>:pn-<Target_WWPN> and host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
+
+	var out []byte
+	FCHostsInfo, err := nvme.getFCHostInfo()
+	if err != nil {
+		log.Errorf("Error gathering NVMe/FC Hosts on the host side: %v", err)
+		return []NVMeTarget{}, nil
+	}
+
+	targets := make([]NVMeTarget, 0)
+	for _, FCHostInfo := range FCHostsInfo {
+
+		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
+		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
+		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
+		cmd := exec.Command(exe[0], exe[1:]...)
+
+		out, err = cmd.Output()
+		if err != nil {
+			continue
+		}
+
+		nvmeTarget := NVMeTarget{}
+		entryCount := 0
+		skipIteration := false
+
+		for _, line := range strings.Split(string(out), "\n") {
+
+			// Output should look like:
+
+			// Discovery Log Number of Records 2, Generation counter 2
+			// =====Discovery Log Entry 0======
+			// trtype:  fc
+			// adrfam:  fibre-channel
+			// subtype: nvme subsystem
+			// treq:    not specified
+			// portid:  0
+			// trsvcid: none
+			// subnqn:  nqn.1111-11.com.dell:powerstore:00:a1a1a1a111a1111a111a
+			// traddr:  nn-0x11aaa111a1111a11:aa-0x11aaa11111111a11
+			//
+			// =====Discovery Log Entry 1======
+			// trtype:  tcp
+			// adrfam:  ipv4
+			// subtype: nvme subsystem
+			// treq:    not specified
+			// portid:  2304
+			// trsvcid: 4420
+			// subnqn:  nqn.1111-11.com.dell:powerstore:00:a1a1a1a111a1111a111a
+			// traddr:  1.1.1.1
+			// sectype: none
+
+			tokens := strings.Fields(line)
+			if len(tokens) < 2 {
+				continue
+			}
+			key := tokens[0]
+			value := strings.Join(tokens[1:], "")
+			switch key {
+
+			case "=====Discovery":
+				// add to array
+				if entryCount != 0 && !skipIteration && nvmeTarget.Portal == targetAddress {
+					targets = append(targets, nvmeTarget)
+				}
+				nvmeTarget = NVMeTarget{}
+				nvmeTarget.HostAdr = initiatorAddress
+				skipIteration = false
+				entryCount++
+				continue
+
+			case "trtype:":
+				nvmeTarget.TargetType = value
+				if value != NVMeTransportTypeFC {
+					skipIteration = true
+				}
+				break
+
+			case "traddr:":
+				nvmeTarget.Portal = value
+				break
+
+			case "subnqn:":
+				nvmeTarget.TargetNqn = value
+				break
+
+			case "adrfam:":
+				nvmeTarget.AdrFam = value
+				break
+
+			case "subtype:":
+				nvmeTarget.SubType = value
+				break
+
+			case "treq:":
+				nvmeTarget.Treq = value
+				break
+
+			case "portid:":
+				nvmeTarget.PortID = value
+				break
+
+			case "trsvcid:":
+				nvmeTarget.TrsvcID = value
+				break
+
+			case "sectype:":
+				nvmeTarget.SecType = value
+				break
+
+			}
+		}
+		if !skipIteration && nvmeTarget.TargetNqn != "" && nvmeTarget.Portal == targetAddress {
+			targets = append(targets, nvmeTarget)
+		}
+	}
+
+	if len(targets) == 0 {
+		log.Errorf("Error discovering NVMe/FC targets: %v", err)
+		return []NVMeTarget{}, err
+	}
+
+	// TODO: Add optional login
+	// log into the target if asked
+	if login {
+		for _, t := range targets {
+			err = nvme.NVMeFCConnect(t)
+			if err != nil {
+				log.Errorf("Error during NVMeFC connect")
+			}
+		}
+	}
 
 	return targets, nil
 }
 
 // GetInitiators returns a list of initiators on the local system.
-func (nvme *NVMeTCP) GetInitiators(filename string) ([]string, error) {
+func (nvme *NVMe) GetInitiators(filename string) ([]string, error) {
 	return nvme.getInitiators(filename)
 }
 
-func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
+func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
@@ -222,7 +408,7 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 		// get the contents of the initiator config file
 		out, err := ioutil.ReadFile(init)
 		if err != nil {
-			fmt.Printf("Error gathering initiator names: %v", err)
+			log.Errorf("Error gathering initiator names: %v", err)
 		}
 		lines := strings.Split(string(out), "\n")
 
@@ -241,12 +427,12 @@ func (nvme *NVMeTCP) getInitiators(filename string) ([]string, error) {
 	return nqns, nil
 }
 
-// NVMeConnect will attempt to connect into a given nvme target
-func (nvme *NVMeTCP) NVMeConnect(target NVMeTarget) error {
-	return nvme.nvmeConnect(target)
+// NVMeTCPConnect will attempt to connect into a given NVMeTCP target
+func (nvme *NVMe) NVMeTCPConnect(target NVMeTarget) error {
+	return nvme.nvmeTCPConnect(target)
 }
 
-func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
+func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget) error {
 	// nvme connect is done via the nvme cli
 	// nvme connect -t tcp -n <target NQN> -a <NVMe interface IP> -s 4420
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
@@ -273,36 +459,79 @@ func (nvme *NVMeTCP) nvmeConnect(target NVMeTarget) error {
 				// session already exists
 				// do not treat this as a failure
 				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
-					fmt.Printf("NVMe connection already exists\n")
+					log.Infof("NVMe connection already exists\n")
 					err = nil
 				} else {
-					fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
 			} else {
-				fmt.Printf("\nnvme connect failure: %v", err)
+				log.Errorf("\nnvme connect failure: %v", err)
 			}
 		} else {
-			fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 		}
 
 		if err != nil {
-			fmt.Printf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 			return err
 		}
 	} else {
-		fmt.Printf("\nnvme connect successful: %s", target.TargetNqn)
+		log.Infof("\nnvme connect successful: %s", target.TargetNqn)
+	}
+
+	return nil
+}
+
+// NVMeFCConnect will attempt to connect into a given NVMeFC target
+func (nvme *NVMe) NVMeFCConnect(target NVMeTarget) error {
+	return nvme.nvmeFCConnect(target)
+}
+
+func (nvme *NVMe) nvmeFCConnect(target NVMeTarget) error {
+	// nvme connect is done via the nvme cli
+	// nvme connect -t fc -a traddr -w host_traddr -n target_nqn
+	// where traddr = nn-<Target_WWNN>:pn-<Target_WWPN> and host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
+	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
+	cmd := exec.Command(exe[0], exe[1:]...)
+	_, err := cmd.Output()
+
+	if err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			// nvme connect exited with an exit code != 0
+			nvmeConnectResult := -1
+			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				nvmeConnectResult = status.ExitStatus()
+			}
+			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
+				// session already exists
+				// do not treat this as a failure
+				log.Infof("NVMe/FC connection already exists\n")
+				err = nil
+			} else {
+				log.Errorf("NVMe/FC connect failure: %v", err)
+			}
+		} else {
+			log.Errorf("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+		}
+
+		if err != nil {
+			log.Errorf("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+			return err
+		}
+	} else {
+		log.Infof("NVMe/FC connect successful: %s", target.TargetNqn)
 	}
 
 	return nil
 }
 
 // NVMeDisconnect will attempt to disconnect from a given nvme target
-func (nvme *NVMeTCP) NVMeDisconnect(target NVMeTarget) error {
+func (nvme *NVMe) NVMeDisconnect(target NVMeTarget) error {
 	return nvme.nvmeDisconnect(target)
 }
 
-func (nvme *NVMeTCP) nvmeDisconnect(target NVMeTarget) error {
+func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
@@ -311,16 +540,16 @@ func (nvme *NVMeTCP) nvmeDisconnect(target NVMeTarget) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		fmt.Printf("\nError logging %s at %s: %v", target.TargetNqn, target.Portal, err)
+		log.Errorf("\nError during NVMe disconnect %s at %s: %v", target.TargetNqn, target.Portal, err)
 	} else {
-		fmt.Printf("\nnvme disconnect successful: %s", target.TargetNqn)
+		log.Infof("\nnvme disconnect successful: %s", target.TargetNqn)
 	}
 
 	return err
 }
 
 // ListNamespaceDevices returns the Device Paths and Namespace of each device and each output content
-func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string {
+func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
 
 	/* nvme list -o json
@@ -355,7 +584,11 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string 
 	*/
 	cmd := exec.Command(exe[0], exe[1:]...)
 
-	output, _ := cmd.Output()
+	output, err := cmd.Output()
+	if err != nil {
+		return map[DevicePathAndNamespace][]string{}, err
+	}
+
 	str := string(output)
 	lines := strings.Split(str, "\n")
 
@@ -414,7 +647,10 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string 
 		[   1]:0x2406
 		*/
 		cmd := exec.Command(exe[0], exe[1:]...)
-		output, _ := cmd.Output()
+		output, err := cmd.Output()
+		if err != nil {
+			return map[DevicePathAndNamespace][]string{}, err
+		}
 
 		str := string(output)
 		lines := strings.Split(str, "\n")
@@ -431,11 +667,11 @@ func (nvme *NVMeTCP) ListNamespaceDevices() map[DevicePathAndNamespace][]string 
 		}
 		namespaceDevices[devicePathAndNamespace] = namespaceDevice
 	}
-	return namespaceDevices
+	return namespaceDevices, nil
 }
 
 // GetNamespaceData returns the information of namespace specific to the namespace Id
-func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, string, error) {
+func (nvme *NVMe) GetNamespaceData(path string, namespaceID string) (string, string, error) {
 
 	var nguid string
 	var namespace string
@@ -480,6 +716,9 @@ func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, 
 	*/
 
 	output, error := cmd.Output()
+	if error != nil {
+		return "", "", error
+	}
 	str := string(output)
 	lines := strings.Split(str, "\n")
 
@@ -503,7 +742,7 @@ func (nvme *NVMeTCP) GetNamespaceData(path string, namespaceID string) (string, 
 }
 
 // GetSessions queries information about  NVMe sessions
-func (nvme *NVMeTCP) GetSessions() ([]NVMESession, error) {
+func (nvme *NVMe) GetSessions() ([]NVMESession, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
 	cmd := exec.Command(exe[0], exe[1:]...)
 	output, err := cmd.Output()

@@ -31,24 +31,37 @@ type Logger = logger.Logger
 // Tracer - Placeholder for tracer
 type Tracer = tracer.Tracer
 
-// NVMEinterface is the interface that provides the iSCSI client functionality
+// NVMEinterface is the interface that provides the NVMe client functionality
 type NVMEinterface interface {
 
 	// DiscoverNVMeTCPTargets discovers the targets exposed via a given portal
-	// returns an array of ISCSITarget instances
+	// returns an array of NVMeTCP Target instances
 	DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error)
 
-	// GetInitiators get a list of iSCSI initiators defined in a specified file
+	// DiscoverNVMeFCTargets discovers the targets exposed via a given portal
+	// returns an array of NVMeFC Target instances
+	DiscoverNVMeFCTargets(address string, login bool) ([]NVMeTarget, error)
+
+	// GetInitiators get a list of NVMe initiators defined in a specified file
 	// To use the system default file of "/etc/nvme/hostnqn", provide a filename of ""
 	GetInitiators(filename string) ([]string, error)
 
-	//NVMeConnect connects into a specified NVMe target
-	NVMeConnect(target NVMeTarget) error
+	//NVMeTCPConnect connects into a specified NVMeTCP target
+	NVMeTCPConnect(target NVMeTarget) error
+
+	//NVMeFCConnect connects into a specified NVMeFC target
+	NVMeFCConnect(target NVMeTarget) error
 
 	// NVMeDisconnect disconnect from the specified NVMe target
 	NVMeDisconnect(target NVMeTarget) error
 
-	// GetSessions queries information about sessions
+	//ListNamespaceDevices returns the Device Paths and Namespace of each NVMe device and each output content
+	ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error)
+
+	//GetNamespaceData returns the information of namespace specific to the namespace ID
+	GetNamespaceData(path string, namespaceID string) (string, string, error)
+
+	// GetSessions queries information about NVMe sessions
 	GetSessions() ([]NVMESession, error)
 
 	// generic implementations

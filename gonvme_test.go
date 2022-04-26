@@ -1,28 +1,47 @@
 package gonvme
 
 import (
+	"encoding/json"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 )
 
+type testData struct {
+	TCPPortal     string
+	FCPortal      string
+	Target        string
+	FCHostAddress string
+}
+
 var (
-	testPortal string
-	testTarget string
+	tcpTestPortal string
+	fcTestPortal  string
+	testTarget    string
+	hostAddress   string
 )
 
 func reset() {
-	if p := os.Getenv("GONVME_PORTAL"); p != "" {
-		testPortal = p
+	testValuesFile, err := ioutil.ReadFile("testdata/unittest_values.json")
+	if err != nil {
+		log.Infof("Error Reading the file: %s ", err)
 	}
-	if t := os.Getenv("GONVME_TARGET"); t != "" {
-		testTarget = t
+	var testValues testData
+	err = json.Unmarshal(testValuesFile, &testValues)
+	if err != nil {
+		log.Infof("Error during unmarshal: %s", err)
 	}
+	tcpTestPortal = testValues.TCPPortal
+	fcTestPortal = testValues.FCPortal
+	testTarget = testValues.Target
+	hostAddress = testValues.FCHostAddress
+
 	GONVMEMock.InduceDiscoveryError = false
 	GONVMEMock.InduceInitiatorError = false
-	GONVMEMock.InduceLoginError = false
+	GONVMEMock.InduceTCPLoginError = false
+	GONVMEMock.InduceFCLoginError = false
 	GONVMEMock.InduceLogoutError = false
 	GONVMEMock.InduceGetSessionsError = false
 }
@@ -31,21 +50,21 @@ func TestPolymorphichCapability(t *testing.T) {
 	reset()
 	var c NVMEinterface
 	// start off with a real implementation
-	c = NewNVMeTCP(map[string]string{})
+	c = NewNVMe(map[string]string{})
 	if c.isMock() {
 		// this should not be a mock implementation
 		t.Error("Expected a real implementation but got a mock one")
 		return
 	}
 	// switch it to mock
-	c = NewMockNVMeTCP(map[string]string{})
+	c = NewMockNVMe(map[string]string{})
 	if !c.isMock() {
 		// this should not be a real implementation
 		t.Error("Expected a mock implementation but got a real one")
 		return
 	}
 	// switch back to a real implementation
-	c = NewNVMeTCP(map[string]string{})
+	c = NewNVMe(map[string]string{})
 	if c.isMock() {
 		// this should not be a mock implementation
 		t.Error("Expected a real implementation but got a mock one")
@@ -53,23 +72,32 @@ func TestPolymorphichCapability(t *testing.T) {
 	}
 }
 
-func TestDiscoverTargets(t *testing.T) {
+func TestDiscoverNVMeTCPTargets(t *testing.T) {
 	reset()
-	c := NewNVMeTCP(map[string]string{})
-	_, err := c.DiscoverNVMeTCPTargets(testPortal, false)
-	if err != nil {
+	c := NewNVMe(map[string]string{})
+	_, err := c.DiscoverNVMeTCPTargets(tcpTestPortal, false)
+	if err == nil {
 		t.Error(err.Error())
 	}
 }
 
-func TestLoginLogoutTargets(t *testing.T) {
+func TestDiscoverNVMeFCTargets(t *testing.T) {
 	reset()
-	c := NewNVMeTCP(map[string]string{})
+	c := NewNVMe(map[string]string{})
+	_, err := c.DiscoverNVMeFCTargets(fcTestPortal, false)
+	if err == nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
+	reset()
+	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
+		AdrFam:     "ipv4",
 		SubType:    "nvme subsystem",
 		Treq:       "not specified",
 		PortID:     "0",
@@ -77,8 +105,36 @@ func TestLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeConnect(tgt)
+	err := c.NVMeTCPConnect(tgt)
+	if err == nil {
+		t.Error(err.Error())
+		return
+	}
+	err = c.NVMeDisconnect(tgt)
 	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+}
+
+func TestNVMeFCLoginLogoutTargets(t *testing.T) {
+	reset()
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     fcTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "fc",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "fc",
+		HostAdr:    hostAddress,
+	}
+	err := c.NVMeFCConnect(tgt)
+	if err == nil {
 		t.Error(err.Error())
 		return
 	}
@@ -91,12 +147,12 @@ func TestLoginLogoutTargets(t *testing.T) {
 
 func TestLoginLoginLogoutTargets(t *testing.T) {
 	reset()
-	c := NewNVMeTCP(map[string]string{})
+	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
+		AdrFam:     "ipv4",
 		SubType:    "nvme subsystem",
 		Treq:       "not specified",
 		PortID:     "0",
@@ -104,13 +160,13 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeConnect(tgt)
-	if err != nil {
+	err := c.NVMeTCPConnect(tgt)
+	if err == nil {
 		t.Error(err.Error())
 		return
 	}
-	err = c.NVMeConnect(tgt)
-	if err != nil {
+	err = c.NVMeFCConnect(tgt)
+	if err == nil {
 		t.Error(err.Error())
 		return
 	}
@@ -123,9 +179,9 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 
 func TestLogoutLogoutTargets(t *testing.T) {
 	reset()
-	c := NewNVMeTCP(map[string]string{})
+	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
 		AdrFam:     "fibre-channel",
@@ -137,7 +193,7 @@ func TestLogoutLogoutTargets(t *testing.T) {
 		TargetType: "tcp",
 	}
 	// log out of the target, just in case we are logged in already
-	_ = c.NVMeConnect(tgt)
+	_ = c.NVMeTCPConnect(tgt)
 	err := c.NVMeDisconnect(tgt)
 	if err != nil {
 		t.Error(err.Error())
@@ -157,7 +213,7 @@ func TestGetInitiators(t *testing.T) {
 		{"testdata/valid.nvme", 1},
 	}
 
-	c := NewNVMeTCP(map[string]string{})
+	c := NewNVMe(map[string]string{})
 	for _, tt := range testdata {
 		initiators, err := c.GetInitiators(tt.filename)
 		if err != nil {
@@ -175,7 +231,7 @@ func TestBuildNVMECommand(t *testing.T) {
 	opts := map[string]string{}
 	initial := []string{"/bin/ls"}
 	opts[ChrootDirectory] = "/test"
-	c := NewNVMeTCP(opts)
+	c := NewNVMe(opts)
 	command := c.buildNVMeCommand(initial)
 	// the length of the resulting command should the length of the initial command +2
 	if len(command) != (len(initial) + 2) {
@@ -189,22 +245,48 @@ func TestBuildNVMECommand(t *testing.T) {
 	}
 }
 
+func TestNVMeListNamespaceDevices(t *testing.T) {
+	reset()
+	c := NewNVMe(map[string]string{})
+	_, err := c.ListNamespaceDevices()
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestGetNamespaceData(t *testing.T) {
+	reset()
+	c := NewNVMe(map[string]string{})
+	namespacesDevices, _ := c.ListNamespaceDevices()
+
+	if len(namespacesDevices) > 0 {
+		for device, ID := range namespacesDevices {
+			DevicePath := device.DevicePath
+			NamespaceID := ID[0]
+			_, _, err := c.GetNamespaceData(DevicePath, NamespaceID)
+			if err != nil {
+				t.Error(err.Error())
+			}
+		}
+	}
+}
+
 func TestGetSessions(t *testing.T) {
 	reset()
-	c := NewNVMeTCP(map[string]string{})
+	c := NewNVMe(map[string]string{})
 	_, err := c.GetSessions()
 	if err != nil {
 		t.Error(err.Error())
 	}
 }
 
-func TestMockDiscoverTargets(t *testing.T) {
+func TestMockDiscoverNVMETCPTargets(t *testing.T) {
 	reset()
 	var c NVMEinterface
 	opts := map[string]string{}
 	expected := 5
-	opts[MockNumberOfTargets] = fmt.Sprintf("%d", expected)
-	c = NewMockNVMeTCP(opts)
+	opts[MockNumberOfTCPTargets] = fmt.Sprintf("%d", expected)
+	c = NewMockNVMe(opts)
 	//c = mock
 	targets, err := c.DiscoverNVMeTCPTargets("1.1.1.1", true)
 	if err != nil {
@@ -215,14 +297,53 @@ func TestMockDiscoverTargets(t *testing.T) {
 	}
 }
 
-func TestMockDiscoverTargetsError(t *testing.T) {
+func TestMockDiscoverNVMEFCTargets(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfFCTargets] = fmt.Sprintf("%d", expected)
+	c = NewMockNVMe(opts)
+	//c = mock
+	targets, err := c.DiscoverNVMeFCTargets("nn-0x11aaa111111a1a1a:pn-0x11aaa111111a1a1a", true)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(targets) != expected {
+		t.Errorf("Expected to find %d targets, but got back %v", expected, targets)
+	}
+}
+
+func TestMockDiscoverNVMeTCPTargetsError(t *testing.T) {
 	reset()
 	opts := map[string]string{}
 	expected := 5
-	opts[MockNumberOfTargets] = fmt.Sprintf("%d", expected)
-	c := NewMockNVMeTCP(opts)
+	opts[MockNumberOfTCPTargets] = fmt.Sprintf("%d", expected)
+	c := NewMockNVMe(opts)
 	GONVMEMock.InduceDiscoveryError = true
 	targets, err := c.DiscoverNVMeTCPTargets("1.1.1.1", false)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+	if len(targets) != 0 {
+		t.Errorf("Expected to receive 0 targets when inducing an error. Received %v", targets)
+		return
+	}
+}
+
+func TestMockDiscoverNVMeFCTargetsError(t *testing.T) {
+	reset()
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfFCTargets] = fmt.Sprintf("%d", expected)
+	c := NewMockNVMe(opts)
+	GONVMEMock.InduceDiscoveryError = true
+	targets, err := c.DiscoverNVMeFCTargets("nn-0x11aaa111111a1a1a:pn-0x11aaa111111a1a1a", false)
 	if err == nil {
 		t.Error("Expected an induced error")
 		return
@@ -242,7 +363,7 @@ func TestMockGetInitiators(t *testing.T) {
 	opts := map[string]string{}
 	expected := 3
 	opts[MockNumberOfInitiators] = fmt.Sprintf("%d", expected)
-	c := NewMockNVMeTCP(opts)
+	c := NewMockNVMe(opts)
 	initiators, err := c.GetInitiators("")
 	if err != nil {
 		t.Error(err.Error())
@@ -257,7 +378,7 @@ func TestMockGetInitiatorsError(t *testing.T) {
 	opts := map[string]string{}
 	expected := 3
 	opts[MockNumberOfInitiators] = fmt.Sprintf("%d", expected)
-	c := NewMockNVMeTCP(opts)
+	c := NewMockNVMe(opts)
 	GONVMEMock.InduceInitiatorError = true
 	initiators, err := c.GetInitiators("")
 	if err == nil {
@@ -274,14 +395,14 @@ func TestMockGetInitiatorsError(t *testing.T) {
 	}
 }
 
-func TestMockLoginLogoutTargets(t *testing.T) {
+func TestMockNVMeTCPLoginLogoutTargets(t *testing.T) {
 	reset()
-	c := NewMockNVMeTCP(map[string]string{})
+	c := NewMockNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
+		AdrFam:     "ipv4",
 		SubType:    "nvme subsystem",
 		Treq:       "not specified",
 		PortID:     "0",
@@ -289,7 +410,35 @@ func TestMockLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeConnect(tgt)
+	err := c.NVMeTCPConnect(tgt)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+	err = c.NVMeDisconnect(tgt)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+}
+
+func TestMockNVMeFCLoginLogoutTargets(t *testing.T) {
+	reset()
+	c := NewMockNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     fcTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "fc",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "fc",
+		HostAdr:    hostAddress,
+	}
+	err := c.NVMeFCConnect(tgt)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -303,13 +452,13 @@ func TestMockLoginLogoutTargets(t *testing.T) {
 
 func TestMockLogoutTargetsError(t *testing.T) {
 	reset()
-	c := NewMockNVMeTCP(map[string]string{})
+	c := NewMockNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
 		AdrFam:     "fibre-channel",
-		SubType:    "nvme subsystem",
+		SubType:    "ipv4",
 		Treq:       "not specified",
 		PortID:     "0",
 		TrsvcID:    "none",
@@ -317,7 +466,7 @@ func TestMockLogoutTargetsError(t *testing.T) {
 		TargetType: "tcp",
 	}
 	GONVMEMock.InduceLogoutError = true
-	err := c.NVMeConnect(tgt)
+	err := c.NVMeTCPConnect(tgt)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -333,11 +482,11 @@ func TestMockLogoutTargetsError(t *testing.T) {
 	}
 }
 
-func TestMockLoginTargetsError(t *testing.T) {
+func TestMockNVMeTCPLoginTargetsError(t *testing.T) {
 	reset()
-	c := NewMockNVMeTCP(map[string]string{})
+	c := NewMockNVMe(map[string]string{})
 	tgt := NVMeTarget{
-		Portal:     testPortal,
+		Portal:     tcpTestPortal,
 		TargetNqn:  testTarget,
 		TrType:     "tcp",
 		AdrFam:     "fibre-channel",
@@ -348,8 +497,36 @@ func TestMockLoginTargetsError(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	GONVMEMock.InduceLoginError = true
-	err := c.NVMeConnect(tgt)
+	GONVMEMock.InduceTCPLoginError = true
+	err := c.NVMeTCPConnect(tgt)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+}
+
+func TestMockNVMeFCLoginTargetsError(t *testing.T) {
+	reset()
+	c := NewMockNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     fcTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "fc",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "fc",
+		HostAdr:    hostAddress,
+	}
+	GONVMEMock.InduceFCLoginError = true
+	err := c.NVMeFCConnect(tgt)
 	if err == nil {
 		t.Error("Expected an induced error")
 		return
@@ -362,7 +539,7 @@ func TestMockLoginTargetsError(t *testing.T) {
 
 func TestMockGetSessions(t *testing.T) {
 	reset()
-	c := NewMockNVMeTCP(map[string]string{})
+	c := NewMockNVMe(map[string]string{})
 	// check without induced error
 	data, err := c.GetSessions()
 	if len(data) == 0 || len(data[0].Target) == 0 {
@@ -374,9 +551,72 @@ func TestMockGetSessions(t *testing.T) {
 	}
 }
 
+func TestMockListNamespaceDevices(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
+	c = NewMockNVMe(opts)
+	//c = mock
+	targets, err := c.ListNamespaceDevices()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(targets) != expected {
+		t.Errorf("Expected to find %d targets, but got back %v", expected, targets)
+	}
+}
+
+func TestMockListNamespaceDevicesError(t *testing.T) {
+	reset()
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
+	c := NewMockNVMe(opts)
+	GONVMEMock.InducedNamespaceDeviceError = true
+	targets, err := c.ListNamespaceDevices()
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+	if len(targets) != 0 {
+		t.Errorf("Expected to receive 0 targets when inducing an error. Received %v", targets)
+		return
+	}
+}
+
+func TestMockGetNamespaceData(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	opts := map[string]string{}
+	c = NewMockNVMe(opts)
+	_, _, err := c.GetNamespaceData("/nvmeMock/0n1", "0x1")
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestMockGetNamespaceDataError(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	opts := map[string]string{}
+	c = NewMockNVMe(opts)
+	GONVMEMock.InducedNamespaceDataError = true
+	_, _, err := c.GetNamespaceData("/nvmeMock/0n1", "0x1")
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+}
+
 func TestMockGetSessionsError(t *testing.T) {
 	reset()
-	c := NewMockNVMeTCP(map[string]string{})
+	c := NewMockNVMe(map[string]string{})
 	// check with induced error
 	GONVMEMock.InduceGetSessionsError = true
 	_, err := c.GetSessions()
