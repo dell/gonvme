@@ -74,6 +74,10 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 		log.Errorf("Error gathering fc hosts: %v", err)
 		return []FCHBAInfo{}, err
 	}
+	if len(match) == 0 {
+		log.Errorf("The fc_host path doesn't exist")
+		return []FCHBAInfo{}, err
+	}
 
 	var FCHostsInfo []FCHBAInfo
 	for _, m := range match {
@@ -241,7 +245,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 
 	var out []byte
 	FCHostsInfo, err := nvme.getFCHostInfo()
-	if err != nil {
+	if err != nil || len(FCHostsInfo) == 0 {
 		log.Errorf("Error gathering NVMe/FC Hosts on the host side: %v", err)
 		return []NVMeTarget{}, nil
 	}
@@ -494,7 +498,15 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget) error {
 	// where traddr = nn-<Target_WWNN>:pn-<Target_WWPN> and host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
 	cmd := exec.Command(exe[0], exe[1:]...)
-	_, err := cmd.Output()
+	var Output string
+	stderr, _ := cmd.StderrPipe()
+	err := cmd.Start()
+
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		Output = scanner.Text()
+	}
+	err = cmd.Wait()
 
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -506,8 +518,13 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget) error {
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				log.Infof("NVMe/FC connection already exists\n")
-				err = nil
+				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
+					log.Infof("NVMe connection already exists\n")
+					err = nil
+				} else {
+					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+					return err
+				}
 			} else {
 				log.Errorf("NVMe/FC connect failure: %v", err)
 			}
