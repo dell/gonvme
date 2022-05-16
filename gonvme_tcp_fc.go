@@ -649,7 +649,7 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 		cmd := exec.Command(exe[0], exe[1:]...)
 		output, err := cmd.Output()
 		if err != nil {
-			return map[DevicePathAndNamespace][]string{}, err
+			continue
 		}
 
 		str := string(output)
@@ -667,6 +667,11 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 		}
 		namespaceDevices[devicePathAndNamespace] = namespaceDevice
 	}
+
+	if len(namespaceDevices) == 0 {
+		return map[DevicePathAndNamespace][]string{}, err
+	}
+
 	return namespaceDevices, nil
 }
 
