@@ -85,8 +85,12 @@ func TestDiscoverNVMeFCTargets(t *testing.T) {
 	reset()
 	c := NewNVMe(map[string]string{})
 	_, err := c.DiscoverNVMeFCTargets(fcTestPortal, false)
-	if err == nil {
-		t.Error(err.Error())
+	FCHostsInfo, err := c.getFCHostInfo()
+	if err == nil && len(FCHostsInfo) != 0 {
+		_, err := c.DiscoverNVMeFCTargets(fcTestPortal, false)
+		if err == nil {
+			t.Error(err.Error())
+		}
 	}
 }
 
@@ -110,10 +114,13 @@ func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
 		t.Error(err.Error())
 		return
 	}
-	err = c.NVMeDisconnect(tgt)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
 	}
 }
 
@@ -138,10 +145,13 @@ func TestNVMeFCLoginLogoutTargets(t *testing.T) {
 		t.Error(err.Error())
 		return
 	}
-	err = c.NVMeDisconnect(tgt)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
 	}
 }
 
@@ -170,10 +180,13 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 		t.Error(err.Error())
 		return
 	}
-	err = c.NVMeDisconnect(tgt)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
 	}
 }
 
@@ -194,10 +207,13 @@ func TestLogoutLogoutTargets(t *testing.T) {
 	}
 	// log out of the target, just in case we are logged in already
 	_ = c.NVMeTCPConnect(tgt)
-	err := c.NVMeDisconnect(tgt)
-	if err != nil {
-		t.Error(err.Error())
-		return
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err := c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
 	}
 }
 
