@@ -47,10 +47,10 @@ type NVMEinterface interface {
 	GetInitiators(filename string) ([]string, error)
 
 	//NVMeTCPConnect connects into a specified NVMeTCP target
-	NVMeTCPConnect(target NVMeTarget) error
+	NVMeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 
 	//NVMeFCConnect connects into a specified NVMeFC target
-	NVMeFCConnect(target NVMeTarget) error
+	NVMeFCConnect(target NVMeTarget, duplicateConnect bool) error
 
 	// NVMeDisconnect disconnect from the specified NVMe target
 	NVMeDisconnect(target NVMeTarget) error

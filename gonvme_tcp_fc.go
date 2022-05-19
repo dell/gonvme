@@ -222,7 +222,7 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 	// log into the target if asked
 	if login {
 		for _, t := range targets {
-			err = nvme.NVMeTCPConnect(t)
+			err = nvme.NVMeTCPConnect(t, false)
 			if err != nil {
 				log.Errorf("Error during NVMeTCP connect")
 			}
@@ -367,7 +367,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 	// log into the target if asked
 	if login {
 		for _, t := range targets {
-			err = nvme.NVMeFCConnect(t)
+			err = nvme.NVMeFCConnect(t, false)
 			if err != nil {
 				log.Errorf("Error during NVMeFC connect")
 			}
@@ -432,14 +432,20 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 }
 
 // NVMeTCPConnect will attempt to connect into a given NVMeTCP target
-func (nvme *NVMe) NVMeTCPConnect(target NVMeTarget) error {
-	return nvme.nvmeTCPConnect(target)
+func (nvme *NVMe) NVMeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
+	return nvme.nvmeTCPConnect(target, duplicateConnect)
 }
 
-func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget) error {
+func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
 	// nvme connect is done via the nvme cli
 	// nvme connect -t tcp -n <target NQN> -a <NVMe interface IP> -s 4420
-	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
+	// D allows duplicate connections between same transport host and subsystem port
+	var exe []string
+	if duplicateConnect {
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "-D"})
+	} else {
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
+	}
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	var Output string
@@ -488,15 +494,21 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget) error {
 }
 
 // NVMeFCConnect will attempt to connect into a given NVMeFC target
-func (nvme *NVMe) NVMeFCConnect(target NVMeTarget) error {
-	return nvme.nvmeFCConnect(target)
+func (nvme *NVMe) NVMeFCConnect(target NVMeTarget, duplicateConnect bool) error {
+	return nvme.nvmeFCConnect(target, duplicateConnect)
 }
 
-func (nvme *NVMe) nvmeFCConnect(target NVMeTarget) error {
+func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error {
 	// nvme connect is done via the nvme cli
 	// nvme connect -t fc -a traddr -w host_traddr -n target_nqn
 	// where traddr = nn-<Target_WWNN>:pn-<Target_WWPN> and host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
-	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
+	// D allows duplicate connections between same transport host and subsystem port
+	var exe []string
+	if duplicateConnect {
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "-D"})
+	} else {
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
+	}
 	cmd := exec.Command(exe[0], exe[1:]...)
 	var Output string
 	stderr, _ := cmd.StderrPipe()
