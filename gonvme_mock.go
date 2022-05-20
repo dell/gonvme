@@ -140,7 +140,7 @@ func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
 	return mockedInitiators, nil
 }
 
-func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget) error {
+func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
 
 	if GONVMEMock.InduceTCPLoginError {
 		return errors.New("NVMeTCP Login induced error")
@@ -149,7 +149,7 @@ func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget) error {
 	return nil
 }
 
-func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget) error {
+func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error {
 
 	if GONVMEMock.InduceFCLoginError {
 		return errors.New("NVMeFC Login induced error")
@@ -248,13 +248,13 @@ func (nvme *MockNVMe) GetInitiators(filename string) ([]string, error) {
 }
 
 // NVMeTCPConnect will attempt to log into an NVMe target
-func (nvme *MockNVMe) NVMeTCPConnect(target NVMeTarget) error {
-	return nvme.nvmeTCPConnect(target)
+func (nvme *MockNVMe) NVMeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
+	return nvme.nvmeTCPConnect(target, duplicateConnect)
 }
 
 // NVMeFCConnect will attempt to log into an NVMe target
-func (nvme *MockNVMe) NVMeFCConnect(target NVMeTarget) error {
-	return nvme.nvmeFCConnect(target)
+func (nvme *MockNVMe) NVMeFCConnect(target NVMeTarget, duplicateConnect bool) error {
+	return nvme.nvmeFCConnect(target, duplicateConnect)
 }
 
 // NVMeDisconnect will attempt to log out of an NVMe target

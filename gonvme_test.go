@@ -109,7 +109,7 @@ func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeTCPConnect(tgt)
+	err := c.NVMeTCPConnect(tgt, false)
 	if err == nil {
 		t.Error(err.Error())
 		return
@@ -140,7 +140,7 @@ func TestNVMeFCLoginLogoutTargets(t *testing.T) {
 		TargetType: "fc",
 		HostAdr:    hostAddress,
 	}
-	err := c.NVMeFCConnect(tgt)
+	err := c.NVMeFCConnect(tgt, false)
 	if err == nil {
 		t.Error(err.Error())
 		return
@@ -170,12 +170,12 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeTCPConnect(tgt)
+	err := c.NVMeTCPConnect(tgt, false)
 	if err == nil {
 		t.Error(err.Error())
 		return
 	}
-	err = c.NVMeFCConnect(tgt)
+	err = c.NVMeFCConnect(tgt, false)
 	if err == nil {
 		t.Error(err.Error())
 		return
@@ -206,7 +206,7 @@ func TestLogoutLogoutTargets(t *testing.T) {
 		TargetType: "tcp",
 	}
 	// log out of the target, just in case we are logged in already
-	_ = c.NVMeTCPConnect(tgt)
+	_ = c.NVMeTCPConnect(tgt, false)
 	nvmeSessions, _ := c.GetSessions()
 	if len(nvmeSessions) != 0 {
 		err := c.NVMeDisconnect(tgt)
@@ -426,7 +426,7 @@ func TestMockNVMeTCPLoginLogoutTargets(t *testing.T) {
 		SecType:    "none",
 		TargetType: "tcp",
 	}
-	err := c.NVMeTCPConnect(tgt)
+	err := c.NVMeTCPConnect(tgt, false)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -454,7 +454,7 @@ func TestMockNVMeFCLoginLogoutTargets(t *testing.T) {
 		TargetType: "fc",
 		HostAdr:    hostAddress,
 	}
-	err := c.NVMeFCConnect(tgt)
+	err := c.NVMeFCConnect(tgt, false)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -482,7 +482,7 @@ func TestMockLogoutTargetsError(t *testing.T) {
 		TargetType: "tcp",
 	}
 	GONVMEMock.InduceLogoutError = true
-	err := c.NVMeTCPConnect(tgt)
+	err := c.NVMeTCPConnect(tgt, false)
 	if err != nil {
 		t.Error(err.Error())
 		return
@@ -514,7 +514,7 @@ func TestMockNVMeTCPLoginTargetsError(t *testing.T) {
 		TargetType: "tcp",
 	}
 	GONVMEMock.InduceTCPLoginError = true
-	err := c.NVMeTCPConnect(tgt)
+	err := c.NVMeTCPConnect(tgt, false)
 	if err == nil {
 		t.Error("Expected an induced error")
 		return
@@ -542,7 +542,7 @@ func TestMockNVMeFCLoginTargetsError(t *testing.T) {
 		HostAdr:    hostAddress,
 	}
 	GONVMEMock.InduceFCLoginError = true
-	err := c.NVMeFCConnect(tgt)
+	err := c.NVMeFCConnect(tgt, false)
 	if err == nil {
 		t.Error("Expected an induced error")
 		return
