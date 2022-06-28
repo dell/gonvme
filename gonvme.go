@@ -52,16 +52,19 @@ type NVMEinterface interface {
 	//NVMeFCConnect connects into a specified NVMeFC target
 	NVMeFCConnect(target NVMeTarget, duplicateConnect bool) error
 
-	// NVMeDisconnect disconnect from the specified NVMe target
+	// NVMeDisconnect disconnect from the specified NVME target
 	NVMeDisconnect(target NVMeTarget) error
 
-	//ListNamespaceDevices returns the Device Paths and Namespace of each NVMe device and each output content
-	ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error)
+	// ListNVMeDeviceNamespace returns the Device Paths and Namespace of each NVME device
+	ListNVMeDeviceNamespace() ([]DevicePathAndNamespace, error)
 
-	//GetNamespaceData returns the information of namespace specific to the namespace ID
-	GetNamespaceData(path string, namespaceID string) (string, string, error)
+	// ListNVMeNamespaceID returns the namespace IDs for each NVME device path
+	ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error)
 
-	// GetSessions queries information about NVMe sessions
+	// GetNamespaceData returns the information of an NVME device path
+	GetNamespaceData(path string) (string, string, error)
+
+	// GetSessions queries information about NVME sessions
 	GetSessions() ([]NVMESession, error)
 
 	// generic implementations

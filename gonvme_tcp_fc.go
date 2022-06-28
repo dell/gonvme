@@ -247,7 +247,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 	FCHostsInfo, err := nvme.getFCHostInfo()
 	if err != nil || len(FCHostsInfo) == 0 {
 		log.Errorf("Error gathering NVMe/FC Hosts on the host side: %v", err)
-		return []NVMeTarget{}, nil
+		return []NVMeTarget{}, err
 	}
 
 	targets := make([]NVMeTarget, 0)
@@ -577,11 +577,12 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	return err
 }
 
-// ListNamespaceDevices returns the Device Paths and Namespace of each device and each output content
-func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error) {
+// ListNVMeDeviceNamespace returns the Device Paths and Namespace of each NVME device
+func (nvme *NVMe) ListNVMeDeviceNamespace() ([]DevicePathAndNamespace, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
 
-	/* nvme list -o json
+	/* ListNVMeDeviceNamespace - Output
+	nvme list -o json
 	{
 	  "Devices" : [
 	    {
@@ -611,11 +612,12 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 	  ]
 	}
 	*/
+
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	output, err := cmd.Output()
 	if err != nil {
-		return map[DevicePathAndNamespace][]string{}, err
+		return []DevicePathAndNamespace{}, err
 	}
 
 	str := string(output)
@@ -654,10 +656,15 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 	if currentPathAndNamespace != nil {
 		result = append(result, *currentPathAndNamespace)
 	}
+	return result, nil
+}
 
-	namespaceDevices := make(map[DevicePathAndNamespace][]string)
+// ListNVMeNamespaceID returns the namespace IDs for each NVME device path
+func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
 
-	/* finding the namespaceDevices Output
+	namespaceIDs := make(map[DevicePathAndNamespace][]string)
+
+	/* ListNVMeNamespaceID Output
 	{devicePath namespace} [namespaceId1 namespaceId2]
 	{/dev/nvme0n1 54} [0x36 0x37]
 	{/dev/nvme0n2 55} [0x36 0x37]
@@ -665,10 +672,10 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 	{/dev/nvme1n2 55} [0x36 0x37]
 	*/
 
-	for _, devicePathAndNamespace := range result {
+	var err error
+	for _, devicePathAndNamespace := range NVMeDeviceNamespace {
 
-		devicePath = devicePathAndNamespace.DevicePath
-		namespace = devicePathAndNamespace.Namespace
+		devicePath := devicePathAndNamespace.DevicePath
 
 		exe := nvme.buildNVMeCommand([]string{"nvme", "list-ns", devicePath})
 		/* nvme list-ns /dev/nvme0n1
@@ -694,23 +701,23 @@ func (nvme *NVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, e
 				}
 			}
 		}
-		namespaceDevices[devicePathAndNamespace] = namespaceDevice
+		namespaceIDs[devicePathAndNamespace] = namespaceDevice
 	}
 
-	if len(namespaceDevices) == 0 {
+	if len(namespaceIDs) == 0 {
 		return map[DevicePathAndNamespace][]string{}, err
 	}
 
-	return namespaceDevices, nil
+	return namespaceIDs, nil
 }
 
-// GetNamespaceData returns the information of namespace specific to the namespace Id
-func (nvme *NVMe) GetNamespaceData(path string, namespaceID string) (string, string, error) {
+// GetNamespaceData returns the information of an NVME device path
+func (nvme *NVMe) GetNamespaceData(path string) (string, string, error) {
 
 	var nguid string
 	var namespace string
 
-	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path, "--namespace", namespaceID})
+	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path})
 	cmd := exec.Command(exe[0], exe[1:]...)
 
 	/*

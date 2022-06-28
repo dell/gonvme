@@ -28,7 +28,8 @@ var (
 		InduceFCLoginError          bool
 		InduceLogoutError           bool
 		InduceGetSessionsError      bool
-		InducedNamespaceDeviceError bool
+		InducedNamespaceIDError     bool
+		InducedDeviceNamespaceError bool
 		InducedNamespaceDataError   bool
 	}
 )
@@ -167,8 +168,32 @@ func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
 	return nil
 }
 
-//GetNamespaceData returns the information of namespace specific to the namespace ID
-func (nvme *MockNVMe) GetNamespaceData(path string, namespaceID string) (string, string, error) {
+// ListNVMeDeviceNamespace returns the Device Paths and Namespace of each NVME device
+func (nvme *MockNVMe) ListNVMeDeviceNamespace() ([]DevicePathAndNamespace, error) {
+	if GONVMEMock.InducedDeviceNamespaceError{
+		return []DevicePathAndNamespace{}, errors.New("NVMeDeviceNamespace induced error")
+	}
+
+	var mockedDevicePathAndNamespace []DevicePathAndNamespace
+	count := getOptionAsInt(nvme.options, MockNumberOfNamespaceDevices)
+	if count == 0 {
+		count = 1
+	}
+
+	for idx := 0; idx < int(count); idx++ {
+		init := fmt.Sprintf("%05d", idx)
+		var currentPathAndNamespace DevicePathAndNamespace
+
+		currentPathAndNamespace.DevicePath = "/dev/nvme0n" + init
+		currentPathAndNamespace.Namespace = init
+
+		mockedDevicePathAndNamespace = append(mockedDevicePathAndNamespace, currentPathAndNamespace)
+	}
+	return mockedDevicePathAndNamespace, nil
+}
+
+//GetNamespaceData returns the information of an NVME device path
+func (nvme *MockNVMe) GetNamespaceData(path string) (string, string, error) {
 	if GONVMEMock.InducedNamespaceDataError {
 		return "", "", errors.New("NVMe Namespace Data Induced Error")
 	}
@@ -179,13 +204,13 @@ func (nvme *MockNVMe) GetNamespaceData(path string, namespaceID string) (string,
 	return nguid, namespace, nil
 }
 
-//ListNamespaceDevices returns the Device Paths and Namespace of each NVMe device and each output content
-func (nvme *MockNVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error) {
-	if GONVMEMock.InducedNamespaceDeviceError {
-		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceDevices induced error")
+// ListNVMeNamespaceID returns the namespace IDs for each NVME device path
+func (nvme *MockNVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
+	if GONVMEMock.InducedNamespaceIDError{
+		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceID induced error")
 	}
 
-	mockedNamespaceDevices := make(map[DevicePathAndNamespace][]string)
+	mockedNamespaceIDs := make(map[DevicePathAndNamespace][]string)
 	count := getOptionAsInt(nvme.options, MockNumberOfNamespaceDevices)
 	if count == 0 {
 		count = 1
@@ -200,9 +225,9 @@ func (nvme *MockNVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]strin
 		currentPathAndNamespace.Namespace = init
 
 		namespaceDevice = append(namespaceDevice, "0x"+init)
-		mockedNamespaceDevices[currentPathAndNamespace] = namespaceDevice
+		mockedNamespaceIDs[currentPathAndNamespace] = namespaceDevice
 	}
-	return mockedNamespaceDevices, nil
+	return mockedNamespaceIDs, nil
 }
 
 func (nvme *MockNVMe) getSessions() ([]NVMESession, error) {
