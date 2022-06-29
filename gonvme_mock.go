@@ -22,14 +22,15 @@ const (
 var (
 	// GONVMEMock is a struct controlling induced errors
 	GONVMEMock struct {
-		InduceDiscoveryError        bool
-		InduceInitiatorError        bool
-		InduceTCPLoginError         bool
-		InduceFCLoginError          bool
-		InduceLogoutError           bool
-		InduceGetSessionsError      bool
-		InducedNamespaceDeviceError bool
-		InducedNamespaceDataError   bool
+		InduceDiscoveryError        		bool
+		InduceInitiatorError        		bool
+		InduceTCPLoginError         		bool
+		InduceFCLoginError          		bool
+		InduceLogoutError           		bool
+		InduceGetSessionsError      		bool
+		InducedNVMeDeviceAndNamespaceError 	bool
+		InducedNVMeNamespaceIDError			bool
+		InducedNVMeDeviceDataError   		bool
 	}
 )
 
@@ -167,9 +168,9 @@ func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
 	return nil
 }
 
-//GetNamespaceData returns the information of namespace specific to the namespace ID
-func (nvme *MockNVMe) GetNamespaceData(path string, namespaceID string) (string, string, error) {
-	if GONVMEMock.InducedNamespaceDataError {
+// GetNVMeDeviceData returns the information (nguid and namespace) of an NVME device path
+func (nvme *MockNVMe) GetNVMeDeviceData(path string) (string, string, error) {
+	if GONVMEMock.InducedNVMeDeviceDataError {
 		return "", "", errors.New("NVMe Namespace Data Induced Error")
 	}
 
@@ -179,13 +180,13 @@ func (nvme *MockNVMe) GetNamespaceData(path string, namespaceID string) (string,
 	return nguid, namespace, nil
 }
 
-//ListNamespaceDevices returns the Device Paths and Namespace of each NVMe device and each output content
-func (nvme *MockNVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error) {
-	if GONVMEMock.InducedNamespaceDeviceError {
-		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceDevices induced error")
+// ListNVMeNamespaceID returns the namespace IDs for each NVME device path
+func (nvme *MockNVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
+	if GONVMEMock.InducedNVMeNamespaceIDError{
+		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceID induced error")
 	}
 
-	mockedNamespaceDevices := make(map[DevicePathAndNamespace][]string)
+	mockedNamespaceIDs := make(map[DevicePathAndNamespace][]string)
 	count := getOptionAsInt(nvme.options, MockNumberOfNamespaceDevices)
 	if count == 0 {
 		count = 1
@@ -194,15 +195,39 @@ func (nvme *MockNVMe) ListNamespaceDevices() (map[DevicePathAndNamespace][]strin
 	for idx := 0; idx < int(count); idx++ {
 		init := fmt.Sprintf("%05d", idx)
 		var currentPathAndNamespace DevicePathAndNamespace
-		var namespaceDevice []string
+		var namespaceIds []string
 
 		currentPathAndNamespace.DevicePath = "/dev/nvme0n" + init
 		currentPathAndNamespace.Namespace = init
 
-		namespaceDevice = append(namespaceDevice, "0x"+init)
-		mockedNamespaceDevices[currentPathAndNamespace] = namespaceDevice
+		namespaceIds = append(namespaceIds, "0x"+init)
+		mockedNamespaceIDs[currentPathAndNamespace] = namespaceIds
 	}
-	return mockedNamespaceDevices, nil
+	return mockedNamespaceIDs, nil
+}
+
+//ListNVMeDeviceAndNamespace returns the Device Paths and Namespace of each NVMe device and each output content
+func (nvme *MockNVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error) {
+	if GONVMEMock.InducedNVMeDeviceAndNamespaceError {
+		return []DevicePathAndNamespace{}, errors.New("listNamespaceDevices induced error")
+	}
+
+	var mockedDeviceAndNamespaces []DevicePathAndNamespace
+	count := getOptionAsInt(nvme.options, MockNumberOfNamespaceDevices)
+	if count == 0 {
+		count = 1
+	}
+
+	for idx := 0; idx < int(count); idx++ {
+		init := fmt.Sprintf("%05d", idx)
+		var currentPathAndNamespace DevicePathAndNamespace
+
+		currentPathAndNamespace.DevicePath = "/dev/nvme0n" + init
+		currentPathAndNamespace.Namespace = init
+
+		mockedDeviceAndNamespaces = append(mockedDeviceAndNamespaces, currentPathAndNamespace)
+	}
+	return mockedDeviceAndNamespaces, nil
 }
 
 func (nvme *MockNVMe) getSessions() ([]NVMESession, error) {
