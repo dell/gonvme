@@ -247,7 +247,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 	FCHostsInfo, err := nvme.getFCHostInfo()
 	if err != nil || len(FCHostsInfo) == 0 {
 		log.Errorf("Error gathering NVMe/FC Hosts on the host side: %v", err)
-		return []NVMeTarget{}, nil
+		return []NVMeTarget{}, err
 	}
 
 	targets := make([]NVMeTarget, 0)
