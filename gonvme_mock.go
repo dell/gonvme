@@ -22,15 +22,15 @@ const (
 var (
 	// GONVMEMock is a struct controlling induced errors
 	GONVMEMock struct {
-		InduceDiscoveryError        		bool
-		InduceInitiatorError        		bool
-		InduceTCPLoginError         		bool
-		InduceFCLoginError          		bool
-		InduceLogoutError           		bool
-		InduceGetSessionsError      		bool
-		InducedNVMeDeviceAndNamespaceError 	bool
-		InducedNVMeNamespaceIDError			bool
-		InducedNVMeDeviceDataError   		bool
+		InduceDiscoveryError               bool
+		InduceInitiatorError               bool
+		InduceTCPLoginError                bool
+		InduceFCLoginError                 bool
+		InduceLogoutError                  bool
+		InduceGetSessionsError             bool
+		InducedNVMeDeviceAndNamespaceError bool
+		InducedNVMeNamespaceIDError        bool
+		InducedNVMeDeviceDataError         bool
 	}
 )
 
@@ -182,7 +182,7 @@ func (nvme *MockNVMe) GetNVMeDeviceData(path string) (string, string, error) {
 
 // ListNVMeNamespaceID returns the namespace IDs for each NVME device path
 func (nvme *MockNVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
-	if GONVMEMock.InducedNVMeNamespaceIDError{
+	if GONVMEMock.InducedNVMeNamespaceIDError {
 		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceID induced error")
 	}
 

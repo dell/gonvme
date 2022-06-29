@@ -294,7 +294,7 @@ func TestListNVMeNamespaceID(t *testing.T) {
 	c := NewNVMe(map[string]string{})
 	devicesAndNamespaces, _ := c.ListNVMeDeviceAndNamespace()
 
-	if len(devicesAndNamespaces)  > 0 {
+	if len(devicesAndNamespaces) > 0 {
 		_, err := c.ListNVMeNamespaceID(devicesAndNamespaces)
 		if err != nil {
 			t.Error(err.Error())
@@ -679,7 +679,7 @@ func TestMockGetNVMeDeviceDataError(t *testing.T) {
 	var c NVMEinterface
 	opts := map[string]string{}
 	c = NewMockNVMe(opts)
-	GONVMEMock.InducedNVMeDeviceDataError= true
+	GONVMEMock.InducedNVMeDeviceDataError = true
 	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
 	if err == nil {
 		t.Error("Expected an induced error")
