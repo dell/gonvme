@@ -44,6 +44,9 @@ func reset() {
 	GONVMEMock.InduceFCLoginError = false
 	GONVMEMock.InduceLogoutError = false
 	GONVMEMock.InduceGetSessionsError = false
+	GONVMEMock.InducedNVMeDeviceAndNamespaceError = false
+	GONVMEMock.InducedNVMeNamespaceIDError = false
+	GONVMEMock.InducedNVMeDeviceDataError = false
 }
 
 func TestPolymorphichCapability(t *testing.T) {
@@ -261,28 +264,40 @@ func TestBuildNVMECommand(t *testing.T) {
 	}
 }
 
-func TestNVMeListNamespaceDevices(t *testing.T) {
+func TestListNVMeDeviceAndNamespace(t *testing.T) {
 	reset()
 	c := NewNVMe(map[string]string{})
-	_, err := c.ListNamespaceDevices()
+	_, err := c.ListNVMeDeviceAndNamespace()
 	if err != nil {
 		t.Error(err.Error())
 	}
 }
 
-func TestGetNamespaceData(t *testing.T) {
+func TestGetNVMeDeviceData(t *testing.T) {
 	reset()
 	c := NewNVMe(map[string]string{})
-	namespacesDevices, _ := c.ListNamespaceDevices()
+	devicesAndNamespaces, _ := c.ListNVMeDeviceAndNamespace()
 
-	if len(namespacesDevices) > 0 {
-		for device, ID := range namespacesDevices {
+	if len(devicesAndNamespaces) > 0 {
+		for _, device := range devicesAndNamespaces {
 			DevicePath := device.DevicePath
-			NamespaceID := ID[0]
-			_, _, err := c.GetNamespaceData(DevicePath, NamespaceID)
+			_, _, err := c.GetNVMeDeviceData(DevicePath)
 			if err != nil {
 				t.Error(err.Error())
 			}
+		}
+	}
+}
+
+func TestListNVMeNamespaceID(t *testing.T) {
+	reset()
+	c := NewNVMe(map[string]string{})
+	devicesAndNamespaces, _ := c.ListNVMeDeviceAndNamespace()
+
+	if len(devicesAndNamespaces) > 0 {
+		_, err := c.ListNVMeNamespaceID(devicesAndNamespaces)
+		if err != nil {
+			t.Error(err.Error())
 		}
 	}
 }
@@ -567,7 +582,7 @@ func TestMockGetSessions(t *testing.T) {
 	}
 }
 
-func TestMockListNamespaceDevices(t *testing.T) {
+func TestMockListNVMeDeviceAndNamespace(t *testing.T) {
 	reset()
 	var c NVMEinterface
 	opts := map[string]string{}
@@ -575,7 +590,7 @@ func TestMockListNamespaceDevices(t *testing.T) {
 	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
 	c = NewMockNVMe(opts)
 	//c = mock
-	targets, err := c.ListNamespaceDevices()
+	targets, err := c.ListNVMeDeviceAndNamespace()
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -584,14 +599,14 @@ func TestMockListNamespaceDevices(t *testing.T) {
 	}
 }
 
-func TestMockListNamespaceDevicesError(t *testing.T) {
+func TestMockListNVMeDeviceAndNamespaceError(t *testing.T) {
 	reset()
 	opts := map[string]string{}
 	expected := 5
 	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
 	c := NewMockNVMe(opts)
-	GONVMEMock.InducedNamespaceDeviceError = true
-	targets, err := c.ListNamespaceDevices()
+	GONVMEMock.InducedNVMeDeviceAndNamespaceError = true
+	targets, err := c.ListNVMeDeviceAndNamespace()
 	if err == nil {
 		t.Error("Expected an induced error")
 		return
@@ -606,24 +621,66 @@ func TestMockListNamespaceDevicesError(t *testing.T) {
 	}
 }
 
-func TestMockGetNamespaceData(t *testing.T) {
+func TestMockListNVMeNamespaceID(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
+	c = NewMockNVMe(opts)
+	//c = mock
+	devices, _ := c.ListNVMeDeviceAndNamespace()
+	targets, err := c.ListNVMeNamespaceID(devices)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(targets) != expected {
+		t.Errorf("Expected to find %d targets, but got back %v", expected, targets)
+	}
+}
+
+func TestMockListNVMeNamespaceIDError(t *testing.T) {
+	reset()
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
+	c := NewMockNVMe(opts)
+	devices, _ := c.ListNVMeDeviceAndNamespace()
+
+	GONVMEMock.InducedNVMeNamespaceIDError = true
+	targets, err := c.ListNVMeNamespaceID(devices)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+	if len(targets) != 0 {
+		t.Errorf("Expected to receive 0 targets when inducing an error. Received %v", targets)
+		return
+	}
+}
+
+func TestMockGetNVMeDeviceData(t *testing.T) {
 	reset()
 	var c NVMEinterface
 	opts := map[string]string{}
 	c = NewMockNVMe(opts)
-	_, _, err := c.GetNamespaceData("/nvmeMock/0n1", "0x1")
+	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
 	if err != nil {
 		t.Error(err.Error())
 	}
 }
 
-func TestMockGetNamespaceDataError(t *testing.T) {
+func TestMockGetNVMeDeviceDataError(t *testing.T) {
 	reset()
 	var c NVMEinterface
 	opts := map[string]string{}
 	c = NewMockNVMe(opts)
-	GONVMEMock.InducedNamespaceDataError = true
-	_, _, err := c.GetNamespaceData("/nvmeMock/0n1", "0x1")
+	GONVMEMock.InducedNVMeDeviceDataError = true
+	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
 	if err == nil {
 		t.Error("Expected an induced error")
 		return

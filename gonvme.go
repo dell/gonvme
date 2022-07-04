@@ -55,11 +55,14 @@ type NVMEinterface interface {
 	// NVMeDisconnect disconnect from the specified NVMe target
 	NVMeDisconnect(target NVMeTarget) error
 
-	//ListNamespaceDevices returns the Device Paths and Namespace of each NVMe device and each output content
-	ListNamespaceDevices() (map[DevicePathAndNamespace][]string, error)
+	// ListNVMeDeviceAndNamespace returns the NVME Device Paths and Namespace of each of the NVME device
+	ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 
-	//GetNamespaceData returns the information of namespace specific to the namespace ID
-	GetNamespaceData(path string, namespaceID string) (string, string, error)
+	// ListNVMeNamespaceID returns the namespace IDs for each NVME device path
+	ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error)
+
+	// GetNVMeDeviceData returns the information (nguid and namespace) of an NVME device path
+	GetNVMeDeviceData(path string) (string, string, error)
 
 	// GetSessions queries information about NVMe sessions
 	GetSessions() ([]NVMESession, error)
