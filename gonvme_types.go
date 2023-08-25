@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2023 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,10 @@ type NVMeTarget struct {
 	HostAdr    string //host_traddr
 }
 
-//NVMESessionState defines the NVMe connection state
+// NVMESessionState defines the NVMe connection state
 type NVMESessionState string
 
-//NVMETransportName defines the NMVe protocol
+// NVMETransportName defines the NMVe protocol
 type NVMETransportName string
 
 const (
