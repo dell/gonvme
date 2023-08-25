@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2023 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -222,7 +222,7 @@ func (nvme *MockNVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNam
 	return mockedNamespaceIDs, nil
 }
 
-//ListNVMeDeviceAndNamespace returns the Device Paths and Namespace of each NVMe device and each output content
+// ListNVMeDeviceAndNamespace returns the Device Paths and Namespace of each NVMe device and each output content
 func (nvme *MockNVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error) {
 	if GONVMEMock.InducedNVMeDeviceAndNamespaceError {
 		return []DevicePathAndNamespace{}, errors.New("listNamespaceDevices induced error")
