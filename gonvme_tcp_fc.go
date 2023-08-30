@@ -483,7 +483,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				// this is applicable if nvme cli version 1.16 or below 
+				// this is applicable if nvme cli version 1.16 or below
 				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
 					log.Infof("NVMe connection already exists\n")
 					err = nil
@@ -551,7 +551,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
-				// this is applicable if nvme cli version 1.16 or below 
+				// this is applicable if nvme cli version 1.16 or below
 				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
 					log.Infof("NVMe connection already exists\n")
 					err = nil
@@ -564,7 +564,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
 				err = nil
-			}  else {
+			} else {
 				log.Errorf("NVMe/FC connect failure: %v", err)
 			}
 		} else {
