@@ -782,9 +782,9 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 		lbaf  0 : ms:0   lbads:9  rp:0 (in use)
 	*/
 
-	output, error := cmd.Output()
-	if error != nil {
-		return "", "", error
+	output, err := cmd.Output()
+	if err != nil {
+		return "", "", err
 	}
 	str := string(output)
 	lines := strings.Split(str, "\n")
@@ -805,7 +805,7 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 			return nguid, namespace, nil
 		}
 	}
-	return nguid, namespace, error
+	return nguid, namespace, err
 }
 
 // GetSessions queries information about  NVMe sessions
