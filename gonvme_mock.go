@@ -70,7 +70,7 @@ func getOptionAsInt(opts map[string]string, key string) int64 {
 	return v
 }
 
-func (nvme *MockNVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *MockNVMe) discoverNVMeTCPTargets(address string, _ bool) ([]NVMeTarget, error) {
 	if GONVMEMock.InduceDiscoveryError {
 		return []NVMeTarget{}, errors.New("discoverTargets induced error")
 	}
@@ -102,7 +102,7 @@ func (nvme *MockNVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMe
 	return mockedTargets, nil
 }
 
-func (nvme *MockNVMe) discoverNVMeFCTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *MockNVMe) discoverNVMeFCTargets(address string, _ bool) ([]NVMeTarget, error) {
 	if GONVMEMock.InduceDiscoveryError {
 		return []NVMeTarget{}, errors.New("discoverTargets induced error")
 	}
@@ -135,7 +135,7 @@ func (nvme *MockNVMe) discoverNVMeFCTargets(address string, login bool) ([]NVMeT
 	return mockedTargets, nil
 }
 
-func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
+func (nvme *MockNVMe) getInitiators(_ string) ([]string, error) {
 	if GONVMEMock.InduceInitiatorError {
 		return []string{}, errors.New("getInitiators induced error")
 	}
@@ -154,7 +154,7 @@ func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
 	return mockedInitiators, nil
 }
 
-func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
+func (nvme *MockNVMe) nvmeTCPConnect(_ NVMeTarget, _ bool) error {
 	if GONVMEMock.InduceTCPLoginError {
 		return errors.New("NVMeTCP Login induced error")
 	}
@@ -162,7 +162,7 @@ func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) e
 	return nil
 }
 
-func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error {
+func (nvme *MockNVMe) nvmeFCConnect(_ NVMeTarget, _ bool) error {
 	if GONVMEMock.InduceFCLoginError {
 		return errors.New("NVMeFC Login induced error")
 	}
@@ -170,7 +170,7 @@ func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) er
 	return nil
 }
 
-func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
+func (nvme *MockNVMe) nvmeDisconnect(_ NVMeTarget) error {
 	if GONVMEMock.InduceLogoutError {
 		return errors.New("NVMe Logout induced error")
 	}
@@ -179,7 +179,7 @@ func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
 }
 
 // GetNVMeDeviceData returns the information (nguid and namespace) of an NVME device path
-func (nvme *MockNVMe) GetNVMeDeviceData(path string) (string, string, error) {
+func (nvme *MockNVMe) GetNVMeDeviceData(_ string) (string, string, error) {
 	if GONVMEMock.InducedNVMeDeviceDataError {
 		return "", "", errors.New("NVMe Namespace Data Induced Error")
 	}
@@ -191,7 +191,7 @@ func (nvme *MockNVMe) GetNVMeDeviceData(path string) (string, string, error) {
 }
 
 // ListNVMeNamespaceID returns the namespace IDs for each NVME device path
-func (nvme *MockNVMe) ListNVMeNamespaceID(NVMeDeviceNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
+func (nvme *MockNVMe) ListNVMeNamespaceID(_ []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
 	if GONVMEMock.InducedNVMeNamespaceIDError {
 		return map[DevicePathAndNamespace][]string{}, errors.New("listNamespaceID induced error")
 	}
