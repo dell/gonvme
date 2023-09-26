@@ -129,7 +129,7 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -270,7 +270,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
 		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
-		cmd := exec.Command(exe[0], exe[1:]...)
+		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 		out, err = cmd.Output()
 		if err != nil {
@@ -458,7 +458,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	} else {
 		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	var Output string
 	stderr, _ := cmd.StderrPipe()
@@ -527,7 +527,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	} else {
 		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
@@ -588,7 +588,7 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	_, err := cmd.Output()
 
@@ -641,7 +641,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 	  ]
 	}
 	*/
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -709,7 +709,7 @@ func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndName
 		[   0]:0x2401
 		[   1]:0x2406
 		*/
-		cmd := exec.Command(exe[0], exe[1:]...)
+		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 		output, err := cmd.Output()
 		if err != nil {
 			continue
@@ -744,7 +744,7 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 	var namespace string
 
 	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	/*
 		nvme id-ns /dev/nvme3n1 0x95
@@ -811,7 +811,7 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 // GetSessions queries information about  NVMe sessions
 func (nvme *NVMe) GetSessions() ([]NVMESession, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	output, err := cmd.Output()
 	if err != nil {
 		if isNoObjsExitCode(err) {
