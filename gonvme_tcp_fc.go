@@ -83,7 +83,6 @@ func (nvme *NVMe) buildNVMeCommand(cmd []string) []string {
 }
 
 func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
-
 	match, err := filepath.Glob("/sys/class/fc_host/host*")
 	if err != nil {
 		log.Errorf("Error gathering fc hosts: %v", err)
@@ -398,7 +397,6 @@ func (nvme *NVMe) GetInitiators(filename string) ([]string, error) {
 }
 
 func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
-
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
 	nqns := []string{}
@@ -432,7 +430,6 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 		lines := strings.Split(string(out), "\n")
 
 		for _, line := range lines {
-
 			if line != "" {
 				nqns = append(nqns, line)
 			}
@@ -606,7 +603,6 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 
 // ListNVMeDeviceAndNamespace returns the NVME Device Paths and Namespace of each of the NVME device
 func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error) {
-
 	/* ListNVMeDeviceAndNamespace Output
 	{/dev/nvme0n1 54}
 	{/dev/nvme0n2 55}
@@ -694,7 +690,6 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 
 // ListNVMeNamespaceID returns the namespace IDs for each NVME device path
 func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
-
 	/* ListNVMeNamespaceID Output
 	{devicePath namespace} [namespaceId1 namespaceId2]
 	{/dev/nvme0n1 54} [0x36 0x37]
@@ -745,7 +740,6 @@ func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndName
 
 // GetNVMeDeviceData returns the information (nguid and namespace) of an NVME device path
 func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
-
 	var nguid string
 	var namespace string
 

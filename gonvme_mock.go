@@ -35,20 +35,18 @@ const (
 	MockNumberOfNamespaceDevices = "numberOfNamespaceDevices"
 )
 
-var (
-	// GONVMEMock is a struct controlling induced errors
-	GONVMEMock struct {
-		InduceDiscoveryError               bool
-		InduceInitiatorError               bool
-		InduceTCPLoginError                bool
-		InduceFCLoginError                 bool
-		InduceLogoutError                  bool
-		InduceGetSessionsError             bool
-		InducedNVMeDeviceAndNamespaceError bool
-		InducedNVMeNamespaceIDError        bool
-		InducedNVMeDeviceDataError         bool
-	}
-)
+// GONVMEMock is a struct controlling induced errors
+var GONVMEMock struct {
+	InduceDiscoveryError               bool
+	InduceInitiatorError               bool
+	InduceTCPLoginError                bool
+	InduceFCLoginError                 bool
+	InduceLogoutError                  bool
+	InduceGetSessionsError             bool
+	InducedNVMeDeviceAndNamespaceError bool
+	InducedNVMeNamespaceIDError        bool
+	InducedNVMeDeviceDataError         bool
+}
 
 // MockNVMe provides a mock implementation of an NVMe client
 type MockNVMe struct {
@@ -138,7 +136,6 @@ func (nvme *MockNVMe) discoverNVMeFCTargets(address string, login bool) ([]NVMeT
 }
 
 func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
-
 	if GONVMEMock.InduceInitiatorError {
 		return []string{}, errors.New("getInitiators induced error")
 	}
@@ -158,7 +155,6 @@ func (nvme *MockNVMe) getInitiators(filename string) ([]string, error) {
 }
 
 func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error {
-
 	if GONVMEMock.InduceTCPLoginError {
 		return errors.New("NVMeTCP Login induced error")
 	}
@@ -167,7 +163,6 @@ func (nvme *MockNVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) e
 }
 
 func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error {
-
 	if GONVMEMock.InduceFCLoginError {
 		return errors.New("NVMeFC Login induced error")
 	}
@@ -176,7 +171,6 @@ func (nvme *MockNVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) er
 }
 
 func (nvme *MockNVMe) nvmeDisconnect(target NVMeTarget) error {
-
 	if GONVMEMock.InduceLogoutError {
 		return errors.New("NVMe Logout induced error")
 	}
@@ -247,7 +241,6 @@ func (nvme *MockNVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, er
 }
 
 func (nvme *MockNVMe) getSessions() ([]NVMESession, error) {
-
 	if GONVMEMock.InduceGetSessionsError {
 		return []NVMESession{}, errors.New("getSessions induced error")
 	}

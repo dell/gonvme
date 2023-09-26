@@ -239,7 +239,7 @@ func TestLogoutLogoutTargets(t *testing.T) {
 
 func TestGetInitiators(t *testing.T) {
 	reset()
-	var testdata = []struct {
+	testdata := []struct {
 		filename string
 		count    int
 	}{
@@ -259,7 +259,6 @@ func TestGetInitiators(t *testing.T) {
 			t.Errorf("Expected %d initiators in %s, but got %d", tt.count, tt.filename, len(initiators))
 		}
 	}
-
 }
 
 func TestBuildNVMECommand(t *testing.T) {
@@ -335,7 +334,7 @@ func TestMockDiscoverNVMETCPTargets(t *testing.T) {
 	expected := 5
 	opts[MockNumberOfTCPTargets] = fmt.Sprintf("%d", expected)
 	c = NewMockNVMe(opts)
-	//c = mock
+	// c = mock
 	targets, err := c.DiscoverNVMeTCPTargets("1.1.1.1", true)
 	if err != nil {
 		t.Error(err.Error())
@@ -352,7 +351,7 @@ func TestMockDiscoverNVMEFCTargets(t *testing.T) {
 	expected := 5
 	opts[MockNumberOfFCTargets] = fmt.Sprintf("%d", expected)
 	c = NewMockNVMe(opts)
-	//c = mock
+	// c = mock
 	targets, err := c.DiscoverNVMeFCTargets("nn-0x11aaa111111a1a1a:pn-0x11aaa111111a1a1a", true)
 	if err != nil {
 		t.Error(err.Error())
@@ -606,7 +605,7 @@ func TestMockListNVMeDeviceAndNamespace(t *testing.T) {
 	expected := 5
 	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
 	c = NewMockNVMe(opts)
-	//c = mock
+	// c = mock
 	targets, err := c.ListNVMeDeviceAndNamespace()
 	if err != nil {
 		t.Error(err.Error())
@@ -645,7 +644,7 @@ func TestMockListNVMeNamespaceID(t *testing.T) {
 	expected := 5
 	opts[MockNumberOfNamespaceDevices] = fmt.Sprintf("%d", expected)
 	c = NewMockNVMe(opts)
-	//c = mock
+	// c = mock
 	devices, _ := c.ListNVMeDeviceAndNamespace()
 	targets, err := c.ListNVMeNamespaceID(devices)
 	if err != nil {
