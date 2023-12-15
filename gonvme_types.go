@@ -18,17 +18,17 @@ package gonvme
 
 // NVMeTarget defines an NVMe target
 type NVMeTarget struct {
-	Portal     string //traddr
-	TargetNqn  string //subnqn
-	TrType     string //trtype
-	AdrFam     string //adrfam
-	SubType    string //subtype
-	Treq       string //treq
-	PortID     string //portid
-	TrsvcID    string //trsvcid
-	SecType    string //sectype
-	TargetType string //trtype
-	HostAdr    string //host_traddr
+	Portal     string // traddr
+	TargetNqn  string // subnqn
+	TrType     string // trtype
+	AdrFam     string // adrfam
+	SubType    string // subtype
+	Treq       string // treq
+	PortID     string // portid
+	TrsvcID    string // trsvcid
+	SecType    string // sectype
+	TargetType string // trtype
+	HostAdr    string // host_traddr
 }
 
 // NVMESessionState defines the NVMe connection state
@@ -44,18 +44,18 @@ const (
 	// NVMeTransportTypeFC - Placeholder for NVMe Transport type FC
 	NVMeTransportTypeFC = "fc"
 
-	//NVMESessionStateLive indicates the NVMe connection state as live
+	// NVMESessionStateLive indicates the NVMe connection state as live
 	NVMESessionStateLive NVMESessionState = "live"
-	//NVMESessionStateDeleting indicates the NVMe connection state as deleting
+	// NVMESessionStateDeleting indicates the NVMe connection state as deleting
 	NVMESessionStateDeleting NVMESessionState = "deleting"
-	//NVMESessionStateConnecting indicates the NVMe connection state as connecting
+	// NVMESessionStateConnecting indicates the NVMe connection state as connecting
 	NVMESessionStateConnecting NVMESessionState = "connecting"
 
-	//NVMETransportNameTCP indicates the NVMe protocol as tcp
+	// NVMETransportNameTCP indicates the NVMe protocol as tcp
 	NVMETransportNameTCP NVMETransportName = "tcp"
-	//NVMETransportNameFC indicates the NVMe protocol as fc
+	// NVMETransportNameFC indicates the NVMe protocol as fc
 	NVMETransportNameFC NVMETransportName = "fc"
-	//NVMETransportNameRDMA indicates the NVMe protocol as rdma
+	// NVMETransportNameRDMA indicates the NVMe protocol as rdma
 	NVMETransportNameRDMA NVMETransportName = "rdma"
 )
 
