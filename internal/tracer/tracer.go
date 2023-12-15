@@ -49,7 +49,7 @@ func TraceFuncCall(ctx context.Context, funcName string) func() {
 type DummyTracer struct{}
 
 // Trace - default trace
-func (dl *DummyTracer) Trace(ctx context.Context, format string, args ...interface{}) {
+func (dl *DummyTracer) Trace(_ context.Context, format string, args ...interface{}) {
 	fmt.Printf(format+"\n", args...)
 }
 
