@@ -205,13 +205,13 @@ func (nvme *MockNVMe) ListNVMeNamespaceID(_ []DevicePathAndNamespace) (map[Devic
 	for idx := 0; idx < int(count); idx++ {
 		init := fmt.Sprintf("%05d", idx)
 		var currentPathAndNamespace DevicePathAndNamespace
-		var namespaceIds []string
+		var namespaceIDs []string
 
 		currentPathAndNamespace.DevicePath = "/dev/nvme0n" + init
 		currentPathAndNamespace.Namespace = init
 
-		namespaceIds = append(namespaceIds, "0x"+init)
-		mockedNamespaceIDs[currentPathAndNamespace] = namespaceIds
+		namespaceIDs = append(namespaceIDs, "0x"+init)
+		mockedNamespaceIDs[currentPathAndNamespace] = namespaceIDs
 	}
 	return mockedNamespaceIDs, nil
 }
