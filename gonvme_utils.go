@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022-2023 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2024 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package gonvme
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -33,40 +34,56 @@ type subsystems struct {
 	Paths []map[string]string `json:"Paths"`
 }
 
-// Response of subsystems.
-type Response struct {
-	Subsys []subsystems `json:"Subsystems"`
+// SubSysResponse of subsystems.
+type SubSysResponse struct {
+	HostNQN    string       `json:"HostNQN"`
+	HostID     string       `json:"HostID"`
+	Subsystems []subsystems `json:"Subsystems"`
 }
 
 func (sp *sessionParser) Parse(data []byte) []NVMESession {
 	str := string(data)
+	if str[0] == '{' {
+		str = fmt.Sprintf("[%s]", str)
+	}
 	var result []NVMESession
-	var response Response
+	var response []SubSysResponse
 	err := json.Unmarshal([]byte(str), &response)
 	if err != nil {
 		log.Error("JSON-encoded parsing error: ", err.Error())
 		return result
 	}
-	for _, system := range response.Subsys {
-		session := NVMESession{}
-		session.Target = system.NQN
-		reAdd := `(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}`
-		re := regexp.MustCompilePOSIX(reAdd)
-		for _, path := range system.Paths {
-			session.Name = path["Name"]
-			session.NVMETransportName = NVMETransportName(path["Transport"])
-			if path["Transport"] == NVMeTransportTypeFC {
-				session.Portal = strings.Split(strings.Fields(path["Address"])[0], "=")[1]
-			} else if path["Transport"] == NVMeTransportTypeTCP {
-				if re.MatchString(path["Address"]) {
-					session.Portal = re.FindString(path["Address"]) + ":" + strings.ReplaceAll(strings.Split(strings.Fields(path["Address"])[1], "=")[1], "\"", "")
+	for _, resp := range response {
+		for _, system := range resp.Subsystems {
+			session := NVMESession{}
+			session.Target = system.NQN
+			reAdd := `(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}`
+			re := regexp.MustCompilePOSIX(reAdd)
+			for _, path := range system.Paths {
+				session.Name = path["Name"]
+				session.NVMETransportName = NVMETransportName(path["Transport"])
+				if path["Transport"] == NVMeTransportTypeFC {
+					session.Portal = strings.Split(strings.Fields(path["Address"])[0], "=")[1]
+				} else if path["Transport"] == NVMeTransportTypeTCP {
+					if re.MatchString(path["Address"]) {
+						ip := re.FindString(path["Address"])
+						portHolder := ""
+						for _, item := range strings.Split(path["Address"], ",") { // fmt: [traddr=10.230.1.1,trsvcid=4420,src=00]
+							if strings.Contains(item, "trsvcid") {
+								portHolder = item
+								break
+							}
+						}
+						port := strings.ReplaceAll(strings.Split(portHolder, "=")[1], "\"", "")
+						session.Portal = ip + ":" + port
+					}
+				} else {
+					continue
 				}
-			} else {
-				continue
-			}
-			session.NVMESessionState = NVMESessionState(path["State"])
-			result = append(result, session)
+				session.NVMESessionState = NVMESessionState(path["State"])
+				result = append(result, session)
 
+			}
 		}
 	}
 	return result
