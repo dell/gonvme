@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2024 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,9 @@ const (
 
 	// NVMePort - port number
 	NVMePort = "4420"
+
+	// NVMEAlreadyConnected contains output holder for nvme connect
+	NVMEAlreadyConnected = "already connected"
 
 	// NVMeNoObjsFoundExitCode exit code indicates that no records/targets/sessions/portals
 	// found to execute operation on
@@ -459,7 +462,6 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
 	}
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
-
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
@@ -468,6 +470,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	for scanner.Scan() {
 		Output = scanner.Text()
 	}
+	log.Debugf("connect output: %s", Output)
 	err = cmd.Wait()
 
 	if err != nil {
@@ -488,13 +491,13 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, "already connnected") {
+			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
 				err = nil
 			} else {
-				log.Errorf("\nnvme connect failure: %v", err)
+				log.Errorf("\nnvme connect failure: %v, %s", err, err.Error())
 			}
 		} else {
 			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
