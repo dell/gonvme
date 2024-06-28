@@ -559,7 +559,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, "already connnected") {
+			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
