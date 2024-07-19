@@ -100,14 +100,16 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 	for _, m := range match {
 
 		var FCHostInfo FCHBAInfo
-		data, err := os.ReadFile(path.Join(m, "port_name"))
+		portNamePath := path.Join(m, "port_name")
+		data, err := os.ReadFile(filepath.Clean(portNamePath))
 		if err != nil {
 			log.Errorf("match: %s failed to read port_name file: %s", match, err.Error())
 			continue
 		}
 		FCHostInfo.PortName = strings.TrimSpace(string(data))
 
-		data, err = os.ReadFile(path.Join(m, "node_name"))
+		nodeNamePath := path.Join(m, "node_name")
+		data, err = os.ReadFile(filepath.Clean(nodeNamePath))
 		if err != nil {
 			log.Errorf("match: %s failed to read node_name file: %s", match, err.Error())
 			continue
@@ -426,7 +428,7 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 		}
 
 		// get the contents of the initiator config file
-		out, err := os.ReadFile(init)
+		out, err := os.ReadFile(filepath.Clean(init))
 		if err != nil {
 			log.Errorf("Error gathering initiator names: %v", err)
 		}
