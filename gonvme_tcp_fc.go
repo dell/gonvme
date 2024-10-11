@@ -528,9 +528,9 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	// D allows duplicate connections between same transport host and subsystem port
 	var exe []string
 	if duplicateConnect {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "-D"})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1", "-D"})
 	} else {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1"})
 	}
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
