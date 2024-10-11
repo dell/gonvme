@@ -24,9 +24,10 @@ jobs:
       - name: Run unit tests and check package coverage
         uses: dell/common-github-actions/go-code-tester@main
         with:
-          threshold: 16
+          threshold: 19
           test-folder: "./"
           race-detector: "true"
+          run-test: "TestMock"
   go_security_scan:
     name: Go security
     runs-on: ubuntu-latest

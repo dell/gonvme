@@ -17,7 +17,7 @@
 
 all:check int-test
 
-mock-test:
+unit-test:
 	go clean -cache
 	go test -v -coverprofile=c.out --run=TestMock
 
