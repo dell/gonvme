@@ -835,3 +835,14 @@ func isNoObjsExitCode(err error) bool {
 	}
 	return false
 }
+
+// DeviceRescan rescan the NVMe controller device
+func (nvme *NVMe) DeviceRescan(device string) error {
+	exe := nvme.buildNVMeCommand([]string{"nvme", "ns-rescan", device})
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	_, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	return nil
+}

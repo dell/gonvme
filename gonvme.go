@@ -69,6 +69,9 @@ type NVMEinterface interface {
 	// generic implementations
 	isMock() bool
 	getOptions() map[string]string
+
+	// DeviceRescan rescan the NVMe controller device
+	DeviceRescan(device string) error
 }
 
 // NVMeType is the base structure for each platform implementation
