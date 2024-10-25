@@ -263,6 +263,13 @@ func (nvme *MockNVMe) getSessions() ([]NVMESession, error) {
 	return sessions, nil
 }
 
+func (nvme *MockNVMe) deviceRescan(device string) (string, error) {
+	if GONVMEMock.InduceGetSessionsError {
+		return "", errors.New("deviceRescan induced error")
+	}
+	return "", nil
+}
+
 // ====================================================================
 // Architecture agnostic code for the mock implementation
 
@@ -299,4 +306,9 @@ func (nvme *MockNVMe) NVMeDisconnect(target NVMeTarget) error {
 // GetSessions Queries NVMe session info
 func (nvme *MockNVMe) GetSessions() ([]NVMESession, error) {
 	return nvme.getSessions()
+}
+
+// DeviceRescan rescan the NVMe device
+func (nvme *MockNVMe) DeviceRescan(device string) (string, error) {
+	return nvme.deviceRescan(device)
 }
