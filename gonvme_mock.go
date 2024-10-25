@@ -306,9 +306,9 @@ func (nvme *MockNVMe) DeviceRescan(device string) error {
 	return nvme.deviceRescan(device)
 }
 
-func (nvme *MockNVMe) deviceRescan(device string) error {
+func (nvme *MockNVMe) deviceRescan(_ string) error {
 	if GONVMEMock.InduceGetSessionsError {
 		return errors.New("deviceRescan induced error")
 	}
-	return  nil
+	return nil
 }
