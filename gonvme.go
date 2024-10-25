@@ -70,7 +70,7 @@ type NVMEinterface interface {
 	isMock() bool
 	getOptions() map[string]string
 
-	// DeviceRescan rescan the NVMe device
+	// DeviceRescan rescan the NVMe controller device
 	DeviceRescan(device string) error
 }
 
