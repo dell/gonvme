@@ -762,3 +762,25 @@ func compareStr(t *testing.T, str1 string, str2 string) {
 		t.Errorf("strings are not equal: %s != %s", str1, str2)
 	}
 }
+
+func TestMockDeviceRescan(t *testing.T) {
+	reset()
+	    
+    // Create a mock NVMe interface
+	c := NewMockNVMe(map[string]string{})
+
+	// Test successful rescan (no induced error)
+	err := c.DeviceRescan("testDevice")
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+
+	// Induce an error and test failure case
+	GONVMEMock.InduceGetSessionsError = true
+	err = c.DeviceRescan("testDevice")
+	if err == nil {
+		t.Error("Expected an induced error but got nil")
+		return
+	}
+	
+}
