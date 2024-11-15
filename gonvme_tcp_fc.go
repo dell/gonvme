@@ -51,6 +51,7 @@ const (
 type NVMe struct {
 	NVMeType
 	sessionParser NVMeSessionParser
+	NVMeCommand   string
 }
 
 // NewNVMe - returns a new NVMe client
