@@ -36,9 +36,6 @@ const (
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 
-	// NVMeCommand - nvme command
-	NVMeCommand = "nvme"
-
 	// NVMePort - port number
 	NVMePort = "4420"
 
@@ -65,6 +62,25 @@ func NewNVMe(opts map[string]string) *NVMe {
 		},
 	}
 	nvme.sessionParser = &sessionParser{}
+
+	nvme_path := ""
+	paths := []string{"/usr/sbin/nvme", "/usr/bin/nvme", "/bin/nvme"}
+	for _, path := range paths {
+		info, err := os.Stat(path)
+			if os.IsNotExist(err) {
+				log.Errorf("Error: Path %s does not exist\n", path)
+			} else if err != nil {
+				log.Errorf("Error: Unable to access path %s: %v\n", path, err)
+			} else if info.IsDir() {
+				log.Errorf("Error: Path %s is a directory, not an executable\n", path)
+			} else {
+				log.Infof("Success: Path %s exists and is an executable\n", path)
+				nvme_path=path
+				break
+			}
+	}
+	nvme.NVMeCommand = nvme_path
+
 	return &nvme
 }
 
