@@ -93,7 +93,7 @@ func NewNVMe(opts map[string]string) *NVMe {
 				break
 			}
 	}
-	nvme.NVMeCommand = "chroot /noderoot nvme"
+	nvme.NVMeCommand = "nvme"
 
 	return &nvme
 }
