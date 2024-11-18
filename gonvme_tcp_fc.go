@@ -53,18 +53,19 @@ type NVMe struct {
 	NVMeCommand   string
 }
 
-func constructChrootCommand(path string) string {
-	// Split the path into parts
-	parts := strings.Split(path, "/")
-	// Extract the root directory
-	root := "/" + parts[1]
-	// Extract the executable name
-	executable := parts[len(parts)-1]
-	// Construct the final command
-	command := fmt.Sprintf("chroot %s %s", root, executable)
+// func constructChrootCommand(path string) string {
+// 	// Split the path into parts
+// 	parts := strings.Split(path, "/")
+// 	// Extract the root directory
+// 	root := "/" + parts[1]
+// 	// Extract the executable name
+// 	executable := parts[len(parts)-1]
+// 	// Construct the final command
+// 	// command := fmt.Sprintf("chroot %s %s", root, executable)
+// 	command := buildNVMeCommand()
 	
-	return command
-}
+// 	return command
+// }
 
 func NewNVMe(opts map[string]string) *NVMe {
 	nvme := NVMe{
@@ -87,12 +88,12 @@ func NewNVMe(opts map[string]string) *NVMe {
 				log.Errorf("Error: Path %s is a directory, not an executable\n", path)
 			} else {
 				log.Infof("Success: Path %s exists and is an executable\n", path)
-				nvme_path=constructChrootCommand(path)
-				log.Infof("nvme_path: ", nvme_path)
+				// nvme_path=constructChrootCommand(path)
+				// log.Infof("nvme_path: %s", nvme_path)
 				break
 			}
 	}
-	nvme.NVMeCommand = nvme_path
+	nvme.NVMeCommand = "chroot /noderoot nvme"
 
 	return &nvme
 }
