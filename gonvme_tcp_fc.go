@@ -76,7 +76,7 @@ func NewNVMe(opts map[string]string) *NVMe {
 	}
 	nvme.sessionParser = &sessionParser{}
 
-	nvme_path := ""
+	// nvme_path := ""
 	paths := []string{"/noderoot/sbin/nvme"}
 	for _, path := range paths {
 		info, err := os.Stat(path)
