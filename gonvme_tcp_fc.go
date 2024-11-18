@@ -67,8 +67,8 @@ func NewNVMe(opts map[string]string) *NVMe {
 		path_copy := path
 		initiatorConfig := []string{}
 		if nvme.getChrootDirectory() != "/" {
-			nvme.getChrootDirectory() = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
-			path = nvme.getChrootDirectory() + path
+			initiatorConfig = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
+			path = initiatorConfig + path
 		}
 
 		info, err := os.Stat(path)
