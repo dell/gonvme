@@ -62,14 +62,13 @@ func NewNVMe(opts map[string]string) *NVMe {
 	}
 	nvme.sessionParser = &sessionParser{}
 
-	nvme_path := ""
 	paths := []string{"/sbin/nvme"}
 	for _, path := range paths {
 		path_copy := path
 
 		if nvme.getChrootDirectory() != "/" {
-			initiatorConfig = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
-			path = append(nvme.getChrootDirectory(), path)
+			initiatorConfig := append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
+			path = nvme.getChrootDirectory() + path
 		}
 
 		info, err := os.Stat(path)
