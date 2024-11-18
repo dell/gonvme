@@ -53,20 +53,6 @@ type NVMe struct {
 	NVMeCommand   string
 }
 
-// func constructChrootCommand(path string) string {
-// 	// Split the path into parts
-// 	parts := strings.Split(path, "/")
-// 	// Extract the root directory
-// 	root := "/" + parts[1]
-// 	// Extract the executable name
-// 	executable := parts[len(parts)-1]
-// 	// Construct the final command
-// 	// command := fmt.Sprintf("chroot %s %s", root, executable)
-// 	command := buildNVMeCommand()
-	
-// 	return command
-// }
-
 func NewNVMe(opts map[string]string) *NVMe {
 	nvme := NVMe{
 		NVMeType: NVMeType{
@@ -76,9 +62,16 @@ func NewNVMe(opts map[string]string) *NVMe {
 	}
 	nvme.sessionParser = &sessionParser{}
 
-	// nvme_path := ""
-	paths := []string{"/noderoot/sbin/nvme"}
+	nvme_path := ""
+	paths := []string{"/sbin/nvme"}
 	for _, path := range paths {
+		path_copy := path
+
+		if nvme.getChrootDirectory() != "/" {
+			initiatorConfig = append(initiatorConfig, nvme.getChrootDirectory()+"/"+DefaultInitiatorNameFile)
+			path = append(nvme.getChrootDirectory(), path)
+		}
+
 		info, err := os.Stat(path)
 			if os.IsNotExist(err) {
 				log.Errorf("Error: Path %s does not exist\n", path)
@@ -88,12 +81,11 @@ func NewNVMe(opts map[string]string) *NVMe {
 				log.Errorf("Error: Path %s is a directory, not an executable\n", path)
 			} else {
 				log.Infof("Success: Path %s exists and is an executable\n", path)
-				// nvme_path=constructChrootCommand(path)
-				// log.Infof("nvme_path: %s", nvme_path)
+				nvme.NVMeCommand = path_copy
+				log.Infof("nvme.NVMeCommand: %s", nvme.NVMeCommand)
 				break
 			}
 	}
-	nvme.NVMeCommand = "nvme"
 
 	return &nvme
 }
