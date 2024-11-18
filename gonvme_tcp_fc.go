@@ -164,6 +164,8 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
 	exe := nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
+	log.Infof("Executing command: %s", strings.Join(exe, " "))
+
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	out, err := cmd.Output()
