@@ -65,7 +65,6 @@ func NewNVMe(opts map[string]string) *NVMe {
 	paths := []string{"/sbin/nvme"}
 	for _, path := range paths {
 		path_copy := path
-		initiatorConfig := []string{}
 		if nvme.getChrootDirectory() != "/" {
 			path = nvme.getChrootDirectory() + path
 		}
