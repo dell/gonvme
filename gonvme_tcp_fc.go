@@ -88,6 +88,7 @@ func NewNVMe(opts map[string]string) *NVMe {
 			} else {
 				log.Infof("Success: Path %s exists and is an executable\n", path)
 				nvme_path=constructChrootCommand(path)
+				log.Infof("nvme_path: ", nvme_path)
 				break
 			}
 	}
