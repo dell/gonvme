@@ -726,7 +726,7 @@ func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndName
 		[   0]:0x2401
 		[   1]:0x2406
 		*/
-		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+		cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 		output, err := cmd.Output()
 		if err != nil {
 			continue

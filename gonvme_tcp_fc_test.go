@@ -285,6 +285,72 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 	}
 }
 
+func TestListNVMeNamespaceID(t *testing.T) {
+	tests := []struct {
+		name         string
+		getCommandFn func(name string, arg ...string) command
+		devices      []DevicePathAndNamespace
+		want         map[DevicePathAndNamespace][]string
+		wantErr      bool
+	}{
+		{
+			"successfully lists device IDs",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					out: []byte(`
+		[   0]:0x2401
+		[   1]:0x2406`),
+				}
+			},
+			[]DevicePathAndNamespace{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "9217",
+				},
+			},
+			map[DevicePathAndNamespace][]string{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "9217",
+				}: {"0x2401", "0x2406"},
+			},
+			false,
+		},
+		{
+			"empty resposne from error listing",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					err: errors.New("error listing devices"),
+				}
+			},
+			[]DevicePathAndNamespace{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "9217",
+				},
+			},
+			map[DevicePathAndNamespace][]string{},
+			false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalGetCommand := getCommand
+			getCommand = tc.getCommandFn
+			defer func() { getCommand = originalGetCommand }()
+
+			nvme := NewNVMe(nil)
+			got, err := nvme.ListNVMeNamespaceID(tc.devices)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
 type mockCommand struct {
 	err error
 	out []byte
