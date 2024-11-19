@@ -1,6 +1,7 @@
 package gonvme
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -200,4 +201,98 @@ func TestGetInitiators(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListNVMeDeviceAndNamespace(t *testing.T) {
+	tests := []struct {
+		name         string
+		getCommandFn func(name string, arg ...string) command
+		want         []DevicePathAndNamespace
+		wantErr      bool
+	}{
+		{
+			"successfully lists devices",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					out: []byte(`{
+						"Devices" : [
+						  {
+							"NameSpace" : 9217,
+							"DevicePath" : "/dev/nvme0n1",
+							"Firmware" : "2.1.0.0",
+							"Index" : 0,
+							"ModelNumber" : "dellemc",
+							"SerialNumber" : "FP08RZ2",
+							"UsedBytes" : 0,
+							"MaximumLBA" : 10485760,
+							"PhysicalSize" : 5368709120,
+							"SectorSize" : 512
+						  },
+						  {
+							"NameSpace" : 9222,
+							"DevicePath" : "/dev/nvme0n2",
+							"Firmware" : "2.1.0.0",
+							"Index" : 0,
+							"ModelNumber" : "dellemc",
+							"SerialNumber" : "FP08RZ2",
+							"UsedBytes" : 0,
+							"MaximumLBA" : 10485760,
+							"PhysicalSize" : 5368709120,
+							"SectorSize" : 512
+						  }
+						]
+					  }`),
+				}
+			},
+			[]DevicePathAndNamespace{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "9217",
+				},
+				{
+					DevicePath: "/dev/nvme0n2",
+					Namespace:  "9222",
+				},
+			},
+			false,
+		},
+		{
+			"erorr listing devices",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					err: errors.New("error listing devices"),
+				}
+			},
+			nil,
+			true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalGetCommand := getCommand
+			getCommand = tc.getCommandFn
+			defer func() { getCommand = originalGetCommand }()
+
+			nvme := NewNVMe(nil)
+			got, err := nvme.ListNVMeDeviceAndNamespace()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+type mockCommand struct {
+	err error
+	out []byte
+}
+
+func (m mockCommand) Output() ([]byte, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.out, nil
 }

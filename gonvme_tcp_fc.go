@@ -54,6 +54,14 @@ var (
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 )
 
+type command interface {
+	Output() ([]byte, error)
+}
+
+var getCommand = func(name string, arg ...string) command {
+	return exec.Command(name, arg...)
+}
+
 // NVMe provides many nvme-specific functions
 type NVMe struct {
 	NVMeType
@@ -650,7 +658,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 	  ]
 	}
 	*/
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 
 	output, err := cmd.Output()
 	if err != nil {
