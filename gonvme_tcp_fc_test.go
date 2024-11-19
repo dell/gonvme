@@ -94,3 +94,58 @@ func TestGetChrootDirectory(t *testing.T) {
 	chrootDir = nvme.getChrootDirectory()
 	assert.Equal(t, "/", chrootDir)
 }
+
+func TestGetFCHostInfo(t *testing.T) {
+	tests := []struct {
+		name          string
+		fcHostPattern string
+		want          []FCHBAInfo
+		wantErr       bool
+	}{
+		{
+			"successfully gets fibre channel hosts",
+			"testdata/fc_host/host*",
+			[]FCHBAInfo{
+				{
+					NodeName: "0x5005076400c7ec87",
+					PortName: "0xc05076ffd6801e10",
+				},
+			},
+			false,
+		},
+		{
+			"no fibre channel hosts due to path doesn't exist",
+			"testdata/bad/fc_host/host*",
+			[]FCHBAInfo{},
+			false,
+		},
+		{
+			"no fibre channel hosts due to malformed hosts",
+			"testdata/fc_host_bad/host*",
+			[]FCHBAInfo{},
+			false,
+		},
+		{
+			"error reading path due to malformed path",
+			"**/[invalid",
+			[]FCHBAInfo{},
+			true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalFCHostPattern := fcHostPath
+			fcHostPath = tc.fcHostPattern
+			defer func() { fcHostPath = originalFCHostPattern }()
+
+			nvme := NewNVMe(nil)
+			got, err := nvme.getFCHostInfo()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}

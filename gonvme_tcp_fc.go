@@ -50,6 +50,10 @@ const (
 	NVMeNoObjsFoundExitCode = 21
 )
 
+var (
+	fcHostPath = "/sys/class/fc_host/host*"
+)
+
 // NVMe provides many nvme-specific functions
 type NVMe struct {
 	NVMeType
@@ -86,7 +90,7 @@ func (nvme *NVMe) buildNVMeCommand(cmd []string) []string {
 }
 
 func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
-	match, err := filepath.Glob("/sys/class/fc_host/host*")
+	match, err := filepath.Glob(fcHostPath)
 	if err != nil {
 		log.Errorf("Error gathering fc hosts: %v", err)
 		return []FCHBAInfo{}, err
