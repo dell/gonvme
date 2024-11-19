@@ -149,3 +149,55 @@ func TestGetFCHostInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestGetInitiators(t *testing.T) {
+	tests := []struct {
+		name          string
+		initiatorFile string
+		fileName      string
+		options       map[string]string
+		want          []string
+		wantErr       bool
+	}{
+		{
+			"successfully gets initiator",
+			"testdata/nvme/hostnqn",
+			"",
+			nil,
+			[]string{"nqn.2014-08.org.nvmexpress:uuid:4c4c4544-0042-5210-8053-b5c04f424433"},
+			false,
+		},
+		{
+			"successfully gets initiator specifying the file name",
+			"testdata/nvme/hostnqn",
+			"testdata/nvme/hostnqn",
+			nil,
+			[]string{"nqn.2014-08.org.nvmexpress:uuid:4c4c4544-0042-5210-8053-b5c04f424433"},
+			false,
+		},
+		{
+			"error path doesn't exist",
+			"testdata/bad/nvme/hostnqn",
+			"",
+			nil,
+			[]string{},
+			true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalInitiatorFile := DefaultInitiatorNameFile
+			DefaultInitiatorNameFile = tc.initiatorFile
+			defer func() { DefaultInitiatorNameFile = originalInitiatorFile }()
+
+			nvme := NewNVMe(nil)
+			got, err := nvme.GetInitiators(tc.fileName)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}

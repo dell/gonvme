@@ -33,9 +33,6 @@ const (
 	// ChrootDirectory allows the nvme commands to be run within a chrooted path, helpful for containerized services
 	ChrootDirectory = "chrootDirectory"
 
-	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
-	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
-
 	// NVMeCommand - nvme command
 	NVMeCommand = "nvme"
 
@@ -52,6 +49,9 @@ const (
 
 var (
 	fcHostPath = "/sys/class/fc_host/host*"
+
+	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
+	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 )
 
 // NVMe provides many nvme-specific functions
