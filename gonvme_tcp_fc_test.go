@@ -351,6 +351,93 @@ func TestListNVMeNamespaceID(t *testing.T) {
 	}
 }
 
+func TestGetSessions(t *testing.T) {
+	tests := []struct {
+		name         string
+		getCommandFn func(name string, arg ...string) command
+		want         []NVMESession
+		wantErr      bool
+	}{
+		{
+			"successfully gets sessions",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					out: []byte(`[
+		  {
+		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6f08058a-af91-46bf-8311-a60da3a10348",
+		    "HostID":"6f08058a-af91-46bf-8311-a60da3a10348",
+		    "Subsystems":[
+		      {
+		        "Name":"nvme-subsys0",
+		        "NQN":"nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+		        "IOPolicy":"numa",
+		        "Paths":[
+		          {
+		            "Name":"nvme3",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.1,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          },
+		          {
+		            "Name":"nvme2",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.2,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          }
+		        ]
+		      }
+		    ]
+		  }
+		]`),
+				}
+			},
+			[]NVMESession{
+				{
+					Target:            "nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+					Portal:            "10.1.1.1:4420",
+					Name:              "nvme3",
+					NVMETransportName: "tcp",
+					NVMESessionState:  "live",
+				},
+				{
+					Target:            "nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+					Portal:            "10.1.1.2:4420",
+					Name:              "nvme2",
+					NVMETransportName: "tcp",
+					NVMESessionState:  "live",
+				},
+			},
+			false,
+		},
+		{
+			"error listing sessions",
+			func(name string, arg ...string) command {
+				return &mockCommand{
+					err: errors.New("error"),
+				}
+			},
+			nil,
+			true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			originalGetCommand := getCommand
+			getCommand = tc.getCommandFn
+			defer func() { getCommand = originalGetCommand }()
+
+			nvme := NewNVMe(nil)
+			got, err := nvme.GetSessions()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
 type mockCommand struct {
 	err error
 	out []byte

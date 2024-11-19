@@ -828,7 +828,38 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 // GetSessions queries information about  NVMe sessions
 func (nvme *NVMe) GetSessions() ([]NVMESession, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
+
+	/*
+		[
+		  {
+		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6f08058a-af91-46bf-8311-a60da3a10348",
+		    "HostID":"6f08058a-af91-46bf-8311-a60da3a10348",
+		    "Subsystems":[
+		      {
+		        "Name":"nvme-subsys0",
+		        "NQN":"nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+		        "IOPolicy":"numa",
+		        "Paths":[
+		          {
+		            "Name":"nvme3",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.1,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          },
+		          {
+		            "Name":"nvme2",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.2,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          },
+		        ]
+		      }
+		    ]
+		  }
+		]
+	*/
+
 	output, err := cmd.Output()
 	if err != nil {
 		if isNoObjsExitCode(err) {
