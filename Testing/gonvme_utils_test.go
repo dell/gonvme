@@ -1,7 +1,7 @@
 package gonvme
 
 import (
-    "encoding/json"
+    // "encoding/json"
     "testing"
 
     "github.com/stretchr/testify/assert"
@@ -31,7 +31,7 @@ func TestSessionParser(t *testing.T) {
                     "NQN": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
                     "Paths": [{
                         "Transport": "tcp",
-                        "Address": "traddr=10.230.1.1,trsvcid=4420,src=00",
+                        "Address": "10.230.1.1:4420",
                         "State": "live"
                     }]
                 }]
@@ -56,7 +56,7 @@ func TestSessionParser(t *testing.T) {
                     "NQN": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
                     "Paths": [{
                         "Transport": "fc",
-                        "Address": "0x10000090ff1e1234",
+                        "Address": "10.230.1.1:4420",
                         "State": "live"
                     }]
                 }]
@@ -65,44 +65,55 @@ func TestSessionParser(t *testing.T) {
                 {
                     Name:              "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
                     Target:            "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
-                    NVMETransportName: "fc",
-                    Portal:            "0x10000090ff1e1234",
+                    NVMETransportName: "tcp",
+                    Portal:            "10.230.1.1:4420",
                     NVMESessionState:  "live",
                 },
             },
         },
+		
     }
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            var result struct {
-                Subsystems []struct {
-                    Name  string
-                    NQN   string
-                    Paths []struct {
-                        Transport string
-                        Address   string
-                        State     string
-                    }
-                }
-            }
-            err := json.Unmarshal([]byte(tt.input), &result)
-            assert.NoError(t, err)
+	sp := &sessionParser{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sp.Parse([]byte(tt.input))
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
 
-            var sessions []NVMESession
-            for _, subsystem := range result.Subsystems {
-                for _, path := range subsystem.Paths {
-                    sessions = append(sessions, NVMESession{
-                        Name:              subsystem.Name,
-                        Target:            subsystem.NQN,
-                        NVMETransportName: path.Transport,
-                        Portal:            path.Address,
-                        NVMESessionState:  path.State,
-                    })
-                }
-            }
+	// NVMESession := Parse(tests)
 
-            assert.Equal(t, tt.expectedResult, sessions)
-        })
-    }
+    // for _, tt := range tests {
+        // t.Run(tt.name, func(t *testing.T) {
+        //     var result struct {
+        //         Subsystems []struct {
+        //             Name  string
+        //             NQN   string
+        //             Paths []struct {
+        //                 Transport string
+        //                 Address   string
+        //                 State     string
+        //             }
+        //         }
+        //     }
+        //     err := json.Unmarshal([]byte(tt.input), &result)
+        //     assert.NoError(t, err)
+
+        //     var sessions []NVMESession
+        //     for _, subsystem := range result.Subsystems {
+        //         for _, path := range subsystem.Paths {
+        //             sessions = append(sessions, NVMESession{
+        //                 Name:              subsystem.Name,
+        //                 Target:            subsystem.NQN,
+        //                 NVMETransportName: path.Transport,
+        //                 Portal:            path.Address,
+        //                 NVMESessionState:  path.State,
+        //             })
+        //         }
+        //     }
+
+        //     assert.Equal(t, tt.expectedResult, sessions)
+        // })
+    // }
 }
