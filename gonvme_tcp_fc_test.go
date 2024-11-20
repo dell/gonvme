@@ -96,6 +96,24 @@ func TestGetChrootDirectory(t *testing.T) {
 	assert.Equal(t, "/", chrootDir)
 }
 
+func TestBuildNVMeCommand(t *testing.T) {
+    opts := map[string]string{
+        "chrootDirectory": "/test",
+    }
+    nvme := NewNVMe(opts)
+
+    cmd := []string{"nvme", "list"}
+    builtCmd := nvme.buildNVMeCommand(cmd)
+    expectedCmd := []string{"chroot", "/test", "nvme", "list"}
+    assert.Equal(t, expectedCmd, builtCmd)
+
+    opts = map[string]string{}
+    nvme = NewNVMe(opts)
+
+    builtCmd = nvme.buildNVMeCommand(cmd)
+    assert.Equal(t, cmd, builtCmd)
+}
+
 func TestGetFCHostInfo(t *testing.T) {
 	tests := []struct {
 		name          string
