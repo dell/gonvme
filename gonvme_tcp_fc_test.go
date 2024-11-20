@@ -213,13 +213,13 @@ func TestGetInitiators(t *testing.T) {
 func TestListNVMeDeviceAndNamespace(t *testing.T) {
 	tests := []struct {
 		name         string
-		getCommandFn func(name string, arg ...string) command
+		getCommandFn func(_ string, _ ...string) command
 		want         []DevicePathAndNamespace
 		wantErr      bool
 	}{
 		{
 			"successfully lists devices",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					out: []byte(`{
 						"Devices" : [
@@ -265,7 +265,7 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 		},
 		{
 			"erorr listing devices",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error listing devices"),
 				}
@@ -295,14 +295,14 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 func TestListNVMeNamespaceID(t *testing.T) {
 	tests := []struct {
 		name         string
-		getCommandFn func(name string, arg ...string) command
+		getCommandFn func(_ string, _ ...string) command
 		devices      []DevicePathAndNamespace
 		want         map[DevicePathAndNamespace][]string
 		wantErr      bool
 	}{
 		{
 			"successfully lists device IDs",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					out: []byte(`
 		[   0]:0x2401
@@ -325,7 +325,7 @@ func TestListNVMeNamespaceID(t *testing.T) {
 		},
 		{
 			"empty resposne from error listing",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error listing devices"),
 				}
@@ -361,13 +361,13 @@ func TestListNVMeNamespaceID(t *testing.T) {
 func TestGetSessions(t *testing.T) {
 	tests := []struct {
 		name         string
-		getCommandFn func(name string, arg ...string) command
+		getCommandFn func(_ string, _ ...string) command
 		want         []NVMESession
 		wantErr      bool
 	}{
 		{
 			"successfully gets sessions",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					out: []byte(`[
 		  {
@@ -418,7 +418,7 @@ func TestGetSessions(t *testing.T) {
 		},
 		{
 			"error listing sessions",
-			func(name string, arg ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error"),
 				}
