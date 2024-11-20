@@ -18,8 +18,6 @@
 
  import (
 	 "context"
-	 "fmt"
-	 "log"
 	 "testing"
  )
 

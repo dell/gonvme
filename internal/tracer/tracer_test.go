@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"fmt"
 )
 
 type mockTracer struct {
