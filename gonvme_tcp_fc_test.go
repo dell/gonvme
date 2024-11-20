@@ -516,3 +516,134 @@ func TestMockDiscoverNVMEFCTargets(t *testing.T) {
 		t.Errorf("Expected to find %d targets, but got back %v", expected, targets)
 	}
 }
+
+var testTarget string
+func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
+	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     tcpTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "ipv4",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "tcp",
+	}
+	err := c.NVMeTCPConnect(tgt, false)
+	if err == nil {
+		t.Error(err.Error())
+		return
+	}
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+}
+
+var fcTestPortal string
+var hostAddress string
+
+func TestNVMeFCLoginLogoutTargets(t *testing.T) {
+	fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	hostAddress = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     fcTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "fc",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "fc",
+		HostAdr:    hostAddress,
+	}
+	err := c.NVMeFCConnect(tgt, false)
+	if err == nil {
+		t.Error(err.Error())
+		return
+	}
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+}
+
+func TestLoginLoginLogoutTargets(t *testing.T) {
+	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	tcpTestPortal = "1.1.1.1"
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     tcpTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "ipv4",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "tcp",
+	}
+	err := c.NVMeTCPConnect(tgt, false)
+	if err == nil {
+		t.Error(err.Error())
+		return
+	}
+	err = c.NVMeFCConnect(tgt, false)
+	if err == nil {
+		t.Error(err.Error())
+		return
+	}
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err = c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+}
+
+func TestLogoutLogoutTargets(t *testing.T) {
+	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	tcpTestPortal = "1.1.1.1"
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     tcpTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "tcp",
+	}
+	// log out of the target, just in case we are logged in already
+	_ = c.NVMeTCPConnect(tgt, false)
+	nvmeSessions, _ := c.GetSessions()
+	if len(nvmeSessions) != 0 {
+		err := c.NVMeDisconnect(tgt)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+	}
+}
