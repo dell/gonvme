@@ -527,7 +527,7 @@ reset()
 	}
 }
 
-func TestMockDiscoverNVMEFCTargets(t *testing.T) {
+func TestDiscoverNVMEFCTargets(t *testing.T) {
 	var c NVMEinterface
 	MockNumberOfFCTargets := "numberOfFCTargets"
 	opts := map[string]string{}
@@ -811,6 +811,50 @@ func TestMockLogoutTargetsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "induced") {
 		t.Error("Expected an induced error")
+		return
+	}
+}
+
+func TestPolymorphichCapability(t *testing.T) {
+	reset()
+	var c NVMEinterface
+	// start off with a real implementation
+	c = NewNVMe(map[string]string{})
+	if c.isMock() {
+		// this should not be a mock implementation
+		t.Error("Expected a real implementation but got a mock one")
+		return
+	}
+	// switch it to mock
+	c = NewNVMe(map[string]string{})
+	if !c.isMock() {
+		// this should not be a real implementation
+		t.Error("Expected a mock implementation but got a real one")
+		return
+	}
+	// switch back to a real implementation
+	c = NewNVMe(map[string]string{})
+	if c.isMock() {
+		// this should not be a mock implementation
+		t.Error("Expected a real implementation but got a mock one")
+		return
+	}
+}
+
+func TestDeviceRescan(t *testing.T) {
+	reset()
+
+	// Create a mock NVMe interface
+	c := NewNVMe(map[string]string{})
+
+	// Test successful rescan (no induced error)
+	err := c.DeviceRescan("testDevice")
+	if err != nil {
+		t.Errorf("Expected no error, but got: %v", err)
+	}
+	err = c.DeviceRescan("testDevice")
+	if err == nil {
+		t.Error("Expected an induced error but got nil")
 		return
 	}
 }
