@@ -2,13 +2,12 @@ package gonvme
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"os/exec"
 	"testing"
-
-	"encoding/json"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
@@ -21,8 +20,10 @@ type testData struct {
 	FCHostAddress string
 }
 
-var tcpTestPortal string
-var testTarget string
+var (
+	tcpTestPortal string
+	testTarget    string
+)
 
 func reset() {
 	testValuesFile, err := os.ReadFile("testdata/unittest_values.json")
@@ -472,7 +473,6 @@ func (m mockCommand) StderrPipe() (io.ReadCloser, error) {
 }
 
 func TestDiscoverNVMeTCPTargets(t *testing.T) {
-
 	nvme := NewNVMe(map[string]string{})
 	mockOutput := `=====Discovery Log Entry 0======
 trtype:  tcp
@@ -487,7 +487,7 @@ sectype: none
 `
 	reset()
 	originalGetCommand := getCommand
-	getCommandFunc := func(name string, args ...string) command {
+	getCommandFunc := func(_ string, _ ...string) command {
 		return &mockCommand{
 			out:    []byte(mockOutput),
 			outErr: nil,
@@ -502,7 +502,6 @@ sectype: none
 }
 
 func TestDiscoverNVMeFCTargets(t *testing.T) {
-
 	opts := map[string]string{}
 	nvme := NewNVMe(opts)
 
@@ -518,7 +517,7 @@ subnqn:  nqn.1111-11.com.dell:powerstore:00:a1a1a1a111a1111a111a
 traddr:  nn-0x11aaa111a1111a11:aa-0x11aaa11111111a11
 `
 	originalGetCommand := getCommand
-	getCommandFunc := func(name string, args ...string) command {
+	getCommandFunc := func(_ string, _ ...string) command {
 		return &mockCommand{
 			out:    []byte(mockOutput),
 			outErr: nil,
@@ -578,7 +577,7 @@ eui64   : 0000000000000000
 lbaf  0 : ms:0   lbads:9  rp:0 (in use)
 	`
 	originalGetCommand := getCommand
-	getCommandFunc := func(name string, args ...string) command {
+	getCommandFunc := func(_ string, _ ...string) command {
 		return &mockCommand{
 			out:    []byte(mockOutput),
 			outErr: nil,
@@ -607,7 +606,7 @@ func TestGetNVMeDeviceDataError(t *testing.T) {
 	c = NewNVMe(opts)
 
 	originalGetCommand := getCommand
-	getCommandFunc := func(name string, args ...string) command {
+	getCommandFunc := func(_ string, _ ...string) command {
 		return &mockCommand{
 			outErr: errors.New("error"),
 		}
@@ -627,7 +626,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 		name             string
 		nvmeTarget       NVMeTarget
 		duplicateConnect bool
-		getCommandFn     func(name string, args ...string) command
+		getCommandFn     func(_ string, _ ...string) command
 		wantErr          bool
 	}{
 		{
@@ -637,7 +636,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  nil,
@@ -652,7 +651,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  errors.New("error"),
@@ -667,7 +666,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
@@ -697,7 +696,7 @@ func TestNVMeFCConnect(t *testing.T) {
 		name             string
 		nvmeTarget       NVMeTarget
 		duplicateConnect bool
-		getCommandFn     func(name string, args ...string) command
+		getCommandFn     func(_ string, _ ...string) command
 		wantErr          bool
 	}{
 		{
@@ -707,7 +706,7 @@ func TestNVMeFCConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  nil,
@@ -722,7 +721,7 @@ func TestNVMeFCConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  errors.New("error"),
@@ -737,7 +736,7 @@ func TestNVMeFCConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
 			false,
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
 					waitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
@@ -766,7 +765,7 @@ func TestNVMeDisconnect(t *testing.T) {
 	tests := []struct {
 		name         string
 		nvmeTarget   NVMeTarget
-		getCommandFn func(name string, args ...string) command
+		getCommandFn func(_ string, _ ...string) command
 		wantErr      bool
 	}{
 		{
@@ -775,7 +774,7 @@ func TestNVMeDisconnect(t *testing.T) {
 				Portal:    "1.1.1.1",
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: nil,
 				}
@@ -788,7 +787,7 @@ func TestNVMeDisconnect(t *testing.T) {
 				Portal:    "1.1.1.1",
 				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
 			},
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error"),
 				}
@@ -815,12 +814,12 @@ func TestNVMeDisconnect(t *testing.T) {
 func TestDeviceRescan(t *testing.T) {
 	tests := []struct {
 		name         string
-		getCommandFn func(name string, args ...string) command
+		getCommandFn func(_ string, _ ...string) command
 		wantErr      bool
 	}{
 		{
 			"successfully rescans",
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: nil,
 				}
@@ -829,7 +828,7 @@ func TestDeviceRescan(t *testing.T) {
 		},
 		{
 			"error rescanning",
-			func(name string, args ...string) command {
+			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error"),
 				}
