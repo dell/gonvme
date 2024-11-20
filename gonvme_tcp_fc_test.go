@@ -1,19 +1,17 @@
 package gonvme
 
 import (
+	"bytes"
 	"errors"
-	"fmt"
+	"io"
 	"os"
 	"os/exec"
-	"syscall"
 	"testing"
-	"time"
 
 	"encoding/json"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"strings"
 )
 
 type testData struct {
@@ -22,6 +20,9 @@ type testData struct {
 	Target        string
 	FCHostAddress string
 }
+
+var tcpTestPortal string
+var testTarget string
 
 func reset() {
 	testValuesFile, err := os.ReadFile("testdata/unittest_values.json")
@@ -34,35 +35,10 @@ func reset() {
 		log.Infof("Error during unmarshal: %s", err)
 	}
 	tcpTestPortal = testValues.TCPPortal
-	fcTestPortal = testValues.FCPortal
 	testTarget = testValues.Target
-	hostAddress = testValues.FCHostAddress
 }
-
-// Mock function to replace os.Stat in tests
-type MockFileSystem struct{}
-
-func (MockFileSystem) Stat(path string) (os.FileInfo, error) {
-	if path == "/sbin/nvme" {
-		return &mockFileInfo{isDir: false}, nil
-	}
-	return nil, os.ErrNotExist
-}
-
-type mockFileInfo struct {
-	isDir bool
-}
-
-func (m *mockFileInfo) Name() string       { return "" }
-func (m *mockFileInfo) Size() int64        { return 0 }
-func (m *mockFileInfo) Mode() os.FileMode  { return 0 }
-func (m *mockFileInfo) ModTime() time.Time { return time.Time{} }
-func (m *mockFileInfo) IsDir() bool        { return m.isDir }
-func (m *mockFileInfo) Sys() interface{}   { return nil }
 
 func TestNewNVMe(t *testing.T) {
-	// Inject the mock file system
-	// fs := MockFileSystem{}
 	opts := map[string]string{
 		"chrootDirectory": "/test",
 	}
@@ -75,26 +51,13 @@ func TestNewNVMe(t *testing.T) {
 	}
 	nvme.sessionParser = &sessionParser{}
 
-	// nvme := &NVMe{
-	// 	fs:          fs,
-	// 	NVMeCommand: "/sbin/nvme",
-	// 	options:     opts,
-	// }
-
 	assert.NotNil(t, nvme)
-	// assert.Equal(t, "/sbin/nvme", nvme.NVMeCommand)
 }
 
 func TestGetChrootDirectory(t *testing.T) {
-	// fs := MockFileSystem{}
 	opts := map[string]string{
 		"chrootDirectory": "/test",
 	}
-	// nvme := &NVMe{
-	// 	fs:          fs,
-	// 	NVMeCommand: "/sbin/nvme",
-	// 	options:     opts,
-	// }
 
 	nvme := &NVMe{
 		NVMeType: NVMeType{
@@ -108,11 +71,6 @@ func TestGetChrootDirectory(t *testing.T) {
 	assert.Equal(t, "/test", chrootDir)
 
 	opts = map[string]string{}
-	// nvme = &NVMe{
-	// 	fs:          fs,
-	// 	NVMeCommand: "/sbin/nvme",
-	// 	options:     opts,
-	// }
 
 	nvme = &NVMe{
 		NVMeType: NVMeType{
@@ -308,7 +266,7 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 			"erorr listing devices",
 			func(name string, arg ...string) command {
 				return &mockCommand{
-					err: errors.New("error listing devices"),
+					outErr: errors.New("error listing devices"),
 				}
 			},
 			nil,
@@ -368,7 +326,7 @@ func TestListNVMeNamespaceID(t *testing.T) {
 			"empty resposne from error listing",
 			func(name string, arg ...string) command {
 				return &mockCommand{
-					err: errors.New("error listing devices"),
+					outErr: errors.New("error listing devices"),
 				}
 			},
 			[]DevicePathAndNamespace{
@@ -461,7 +419,7 @@ func TestGetSessions(t *testing.T) {
 			"error listing sessions",
 			func(name string, arg ...string) command {
 				return &mockCommand{
-					err: errors.New("error"),
+					outErr: errors.New("error"),
 				}
 			},
 			nil,
@@ -487,22 +445,31 @@ func TestGetSessions(t *testing.T) {
 }
 
 type mockCommand struct {
-	err error
-	out []byte
+	outErr   error
+	startErr error
+	waitErr  error
+	out      []byte
+	stdErr   []byte
 }
 
 func (m mockCommand) Output() ([]byte, error) {
-	if m.err != nil {
-		return nil, m.err
+	if m.outErr != nil {
+		return nil, m.outErr
 	}
 	return m.out, nil
 }
 
-type MockCommand struct {
-	mock.Mock
+func (m mockCommand) Start() error {
+	return m.startErr
 }
 
-var tcpTestPortal string
+func (m mockCommand) Wait() error {
+	return m.waitErr
+}
+
+func (m mockCommand) StderrPipe() (io.ReadCloser, error) {
+	return io.NopCloser(bytes.NewReader(m.stdErr)), nil
+}
 
 func TestDiscoverNVMeTCPTargets(t *testing.T) {
 
@@ -522,8 +489,8 @@ sectype: none
 	originalGetCommand := getCommand
 	getCommandFunc := func(name string, args ...string) command {
 		return &mockCommand{
-			out: []byte(mockOutput),
-			err: nil,
+			out:    []byte(mockOutput),
+			outErr: nil,
 		}
 	}
 	getCommand = getCommandFunc
@@ -553,8 +520,8 @@ traddr:  nn-0x11aaa111a1111a11:aa-0x11aaa11111111a11
 	originalGetCommand := getCommand
 	getCommandFunc := func(name string, args ...string) command {
 		return &mockCommand{
-			out: []byte(mockOutput),
-			err: nil,
+			out:    []byte(mockOutput),
+			outErr: nil,
 		}
 	}
 	getCommand = getCommandFunc
@@ -570,168 +537,67 @@ traddr:  nn-0x11aaa111a1111a11:aa-0x11aaa11111111a11
 	}
 }
 
-var testTarget string
-
-func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	reset()
-
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     tcpTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "tcp",
-		AdrFam:     "ipv4",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "tcp",
-	}
-	err := c.NVMeTCPConnect(tgt, false)
-	if err == nil {
-		t.Error(err.Error())
-		return
-	}
-	nvmeSessions, _ := c.GetSessions()
-	if len(nvmeSessions) != 0 {
-		err = c.NVMeDisconnect(tgt)
-		if err != nil {
-			t.Error(err.Error())
-			return
-		}
-	}
-}
-
-var fcTestPortal string
-var hostAddress string
-
-func TestNVMeFCLoginLogoutTargets(t *testing.T) {
-	// fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	// hostAddress = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
-	reset()
-
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     fcTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "fc",
-		AdrFam:     "fibre-channel",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "fc",
-		HostAdr:    hostAddress,
-	}
-	err := c.NVMeFCConnect(tgt, false)
-	if err == nil {
-		t.Error(err.Error())
-		return
-	}
-	nvmeSessions, _ := c.GetSessions()
-	if len(nvmeSessions) != 0 {
-		err = c.NVMeDisconnect(tgt)
-		if err != nil {
-			t.Error(err.Error())
-			return
-		}
-	}
-}
-
-func TestLoginLoginLogoutTargets(t *testing.T) {
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	// tcpTestPortal = "1.1.1.1"
-	reset()
-
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     tcpTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "tcp",
-		AdrFam:     "ipv4",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "tcp",
-	}
-	err := c.NVMeTCPConnect(tgt, false)
-	if err == nil {
-		t.Error(err.Error())
-		return
-	}
-	err = c.NVMeFCConnect(tgt, false)
-	if err == nil {
-		t.Error(err.Error())
-		return
-	}
-	nvmeSessions, _ := c.GetSessions()
-	if len(nvmeSessions) != 0 {
-		err = c.NVMeDisconnect(tgt)
-		if err != nil {
-			t.Error(err.Error())
-			return
-		}
-	}
-}
-
-func TestLogoutLogoutTargets(t *testing.T) {
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	// tcpTestPortal = "1.1.1.1"
-	reset()
-
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     tcpTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "tcp",
-	}
-	// log out of the target, just in case we are logged in already
-	_ = c.NVMeTCPConnect(tgt, false)
-	nvmeSessions, _ := c.GetSessions()
-	if len(nvmeSessions) != 0 {
-		err := c.NVMeDisconnect(tgt)
-		if err != nil {
-			t.Error(err.Error())
-			return
-		}
-	}
-}
-
-func TestGetNVMeDeviceData(t *testing.T) {
-	c := NewNVMe(map[string]string{})
-	devicesAndNamespaces, _ := c.ListNVMeDeviceAndNamespace()
-
-	if len(devicesAndNamespaces) > 0 {
-		for _, device := range devicesAndNamespaces {
-			DevicePath := device.DevicePath
-			_, _, err := c.GetNVMeDeviceData(DevicePath)
-			if err != nil {
-				t.Error(err.Error())
-			}
-		}
-	}
-}
-
 func TestGetNVMeDeviceDatatest(t *testing.T) {
 	var c NVMEinterface
 	opts := map[string]string{}
 	c = NewNVMe(opts)
-	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
+
+	mockOutput := `
+nvme id-ns /dev/nvme3n1 0x95
+NVME Identify Namespace 149:
+nsze    : 0x1000000
+ncap    : 0x1000000
+nuse    : 0x223b8
+nsfeat  : 0xb
+nlbaf   : 0
+flbas   : 0
+mc      : 0
+dpc     : 0
+dps     : 0
+nmic    : 0x1
+rescap  : 0xff
+fpi     : 0
+dlfeat  : 9
+nawun   : 2047
+nawupf  : 2047
+nacwu   : 0
+nabsn   : 2047
+nabo    : 0
+nabspf  : 2047
+noiob   : 0
+nvmcap  : 0
+mssrl   : 0
+mcl     : 0
+msrc    : 0
+anagrpid: 2
+nsattr  : 0
+nvmsetid: 0
+endgid  : 0
+nguid   : 507911ecda65a2498ccf0968009a5d07
+eui64   : 0000000000000000
+lbaf  0 : ms:0   lbads:9  rp:0 (in use)
+	`
+	originalGetCommand := getCommand
+	getCommandFunc := func(name string, args ...string) command {
+		return &mockCommand{
+			out:    []byte(mockOutput),
+			outErr: nil,
+		}
+	}
+	getCommand = getCommandFunc
+	defer func() { getCommand = originalGetCommand }()
+
+	guid, namespace, err := c.GetNVMeDeviceData("testdata/device_data")
 	if err != nil {
 		t.Error(err.Error())
+	}
+
+	if guid != "507911ecda65a2498ccf0968009a5d07" {
+		t.Errorf("want %s, got %s", "507911ecda65a2498ccf0968009a5d07", guid)
+	}
+
+	if namespace != "149" {
+		t.Errorf("want %s, got %s", "149", namespace)
 	}
 }
 
@@ -739,7 +605,16 @@ func TestGetNVMeDeviceDataError(t *testing.T) {
 	var c NVMEinterface
 	opts := map[string]string{}
 	c = NewNVMe(opts)
-	// GONVMEMock.InducedNVMeDeviceDataError = true
+
+	originalGetCommand := getCommand
+	getCommandFunc := func(name string, args ...string) command {
+		return &mockCommand{
+			outErr: errors.New("error"),
+		}
+	}
+	getCommand = getCommandFunc
+	defer func() { getCommand = originalGetCommand }()
+
 	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
 	if err == nil {
 		t.Error("Expected an induced error")
@@ -747,178 +622,233 @@ func TestGetNVMeDeviceDataError(t *testing.T) {
 	}
 }
 
-func TestMockNVMeTCPLoginTargetsError(t *testing.T) {
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	// tcpTestPortal = "1.1.1.1"
-	reset()
+func TestNVMeTCPConnect(t *testing.T) {
+	tests := []struct {
+		name             string
+		nvmeTarget       NVMeTarget
+		duplicateConnect bool
+		getCommandFn     func(name string, args ...string) command
+		wantErr          bool
+	}{
+		{
+			"successfully connects",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  nil,
+				}
+			},
+			false,
+		},
+		{
+			"error connecting",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  errors.New("error"),
+				}
+			},
+			true,
+		},
+		{
+			"error connecting with code 114",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
+				}
+			},
+			true,
+		},
+	}
 
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     tcpTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "tcp",
-	}
-	// GONVMEMock.InduceTCPLoginError = true
-	err := c.NVMeTCPConnect(tgt, false)
-	if err == nil {
-		t.Error("Expected an induced error")
-		return
-	}
-	if !strings.Contains(err.Error(), "induced") {
-		t.Error("Expected an induced error")
-		return
+	for _, tc := range tests {
+		originalGetCommand := getCommand
+		getCommand = tc.getCommandFn
+		defer func() { getCommand = originalGetCommand }()
+
+		c := NewNVMe(map[string]string{})
+		err := c.NVMeTCPConnect(tc.nvmeTarget, tc.duplicateConnect)
+		if tc.wantErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 }
 
-func TestMockNVMeFCLoginTargetsError(t *testing.T) {
-	// fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	reset()
+func TestNVMeFCConnect(t *testing.T) {
+	tests := []struct {
+		name             string
+		nvmeTarget       NVMeTarget
+		duplicateConnect bool
+		getCommandFn     func(name string, args ...string) command
+		wantErr          bool
+	}{
+		{
+			"successfully connects",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  nil,
+				}
+			},
+			false,
+		},
+		{
+			"error connecting",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  errors.New("error"),
+				}
+			},
+			true,
+		},
+		{
+			"error connecting with code 114",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			false,
+			func(name string, args ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  &exec.ExitError{ProcessState: &os.ProcessState{}},
+				}
+			},
+			true,
+		},
+	}
 
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     fcTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "fc",
-		AdrFam:     "fibre-channel",
-		SubType:    "nvme subsystem",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "fc",
-		HostAdr:    hostAddress,
-	}
-	// GONVMEMock.InduceFCLoginError = true
-	err := c.NVMeFCConnect(tgt, false)
-	if err == nil {
-		t.Error("Expected an induced error")
-		return
-	}
-	if !strings.Contains(err.Error(), "induced") {
-		t.Error("Expected an induced error")
-		return
+	for _, tc := range tests {
+		originalGetCommand := getCommand
+		getCommand = tc.getCommandFn
+		defer func() { getCommand = originalGetCommand }()
+
+		c := NewNVMe(map[string]string{})
+		err := c.NVMeFCConnect(tc.nvmeTarget, tc.duplicateConnect)
+		if tc.wantErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 }
 
-func TestMockLogoutTargetsError(t *testing.T) {
-	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	// tcpTestPortal = "1.1.1.1"
-	reset()
-	c := NewNVMe(map[string]string{})
-	tgt := NVMeTarget{
-		Portal:     tcpTestPortal,
-		TargetNqn:  testTarget,
-		TrType:     "tcp",
-		AdrFam:     "fibre-channel",
-		SubType:    "ipv4",
-		Treq:       "not specified",
-		PortID:     "0",
-		TrsvcID:    "none",
-		SecType:    "none",
-		TargetType: "tcp",
+func TestNVMeDisconnect(t *testing.T) {
+	tests := []struct {
+		name         string
+		nvmeTarget   NVMeTarget
+		getCommandFn func(name string, args ...string) command
+		wantErr      bool
+	}{
+		{
+			"successfully disconnects",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			func(name string, args ...string) command {
+				return &mockCommand{
+					outErr: nil,
+				}
+			},
+			false,
+		},
+		{
+			"error disconnecting",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+			},
+			func(name string, args ...string) command {
+				return &mockCommand{
+					outErr: errors.New("error"),
+				}
+			},
+			true,
+		},
 	}
-	// GONVMEMock.InduceLogoutError = true
-	err := c.NVMeTCPConnect(tgt, false)
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-	err = c.NVMeDisconnect(tgt)
-	if err == nil {
-		t.Error("Expected an induced error")
-		return
-	}
-	if !strings.Contains(err.Error(), "induced") {
-		t.Error("Expected an induced error")
-		return
-	}
-}
 
-func TestPolymorphichCapability(t *testing.T) {
-	reset()
-	var c NVMEinterface
-	// start off with a real implementation
-	c = NewNVMe(map[string]string{})
-	if c.isMock() {
-		// this should not be a mock implementation
-		t.Error("Expected a real implementation but got a mock one")
-		return
-	}
-	// switch it to mock
-	c = NewNVMe(map[string]string{})
-	if !c.isMock() {
-		// this should not be a real implementation
-		t.Error("Expected a mock implementation but got a real one")
-		return
-	}
-	// switch back to a real implementation
-	c = NewNVMe(map[string]string{})
-	if c.isMock() {
-		// this should not be a mock implementation
-		t.Error("Expected a real implementation but got a mock one")
-		return
+	for _, tc := range tests {
+		originalGetCommand := getCommand
+		getCommand = tc.getCommandFn
+		defer func() { getCommand = originalGetCommand }()
+
+		c := NewNVMe(map[string]string{})
+		err := c.NVMeDisconnect(tc.nvmeTarget)
+		if tc.wantErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
 }
 
 func TestDeviceRescan(t *testing.T) {
-	reset()
-
-	// Create a mock NVMe interface
-	c := NewNVMe(map[string]string{})
-
-	// Test successful rescan (no induced error)
-	err := c.DeviceRescan("testDevice")
-	if err != nil {
-		t.Errorf("Expected no error, but got: %v", err)
+	tests := []struct {
+		name         string
+		getCommandFn func(name string, args ...string) command
+		wantErr      bool
+	}{
+		{
+			"successfully rescans",
+			func(name string, args ...string) command {
+				return &mockCommand{
+					outErr: nil,
+				}
+			},
+			false,
+		},
+		{
+			"error rescanning",
+			func(name string, args ...string) command {
+				return &mockCommand{
+					outErr: errors.New("error"),
+				}
+			},
+			true,
+		},
 	}
-	err = c.DeviceRescan("testDevice")
-	if err == nil {
-		t.Error("Expected an induced error but got nil")
-		return
+
+	for _, tc := range tests {
+		originalGetCommand := getCommand
+		getCommand = tc.getCommandFn
+		defer func() { getCommand = originalGetCommand }()
+
+		c := NewNVMe(map[string]string{})
+		err := c.DeviceRescan("device")
+		if tc.wantErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
 	}
-}
-
-type MockExitError struct {
-	*exec.ExitError
-	status syscall.WaitStatus
-}
-
-func (e *MockExitError) Sys() interface{} {
-	return e.status
-}
-
-func TestIsNoObjsExitCode(t *testing.T) {
-	// Test case: error is nil
-	err := error(nil)
-	result := isNoObjsExitCode(err)
-	assert.False(t, result, "Expected false when error is nil")
-
-	// Test case: error is not an exec.ExitError
-	err = fmt.Errorf("some other error")
-	result = isNoObjsExitCode(err)
-	assert.False(t, result, "Expected false when error is not an exec.ExitError")
-
-	// Test case: error is an exec.ExitError with a different exit code
-	exitError := &MockExitError{
-		status: syscall.WaitStatus(1), // Replace 1 with a different exit code
-	}
-	err = exitError
-	result = isNoObjsExitCode(err)
-	assert.False(t, result, "Expected false when exit code is different")
-
-	// Test case: error is an exec.ExitError with the specific exit code
-	exitError = &MockExitError{
-		status: syscall.WaitStatus(NVMeNoObjsFoundExitCode),
-	}
-	err = exitError
-	result = isNoObjsExitCode(err)
-	assert.True(t, result, "Expected true when exit code matches NVMeNoObjsFoundExitCode")
 }

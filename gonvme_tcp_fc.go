@@ -19,6 +19,7 @@ package gonvme
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -56,6 +57,9 @@ var (
 
 type command interface {
 	Output() ([]byte, error)
+	Start() error
+	Wait() error
+	StderrPipe() (io.ReadCloser, error)
 }
 
 var getCommand = func(name string, arg ...string) command {
@@ -475,10 +479,13 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	} else {
 		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1"})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("starting nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+	}
 
 	scanner := bufio.NewScanner(stderr)
 	for scanner.Scan() {
@@ -544,10 +551,13 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	} else {
 		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1"})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("starting nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+	}
 
 	scanner := bufio.NewScanner(stderr)
 	for scanner.Scan() {
@@ -605,7 +615,7 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 
 	_, err := cmd.Output()
 
@@ -761,7 +771,7 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 	var namespace string
 
 	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path})
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 
 	/*
 		nvme id-ns /dev/nvme3n1 0x95
@@ -882,7 +892,7 @@ func isNoObjsExitCode(err error) bool {
 // DeviceRescan rescan the NVMe controller device
 func (nvme *NVMe) DeviceRescan(device string) error {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "ns-rescan", device})
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 	_, err := cmd.Output()
 	if err != nil {
 		return err
