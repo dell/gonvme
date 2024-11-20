@@ -647,3 +647,40 @@ func TestLogoutLogoutTargets(t *testing.T) {
 		}
 	}
 }
+
+func TestGetNVMeDeviceData(t *testing.T) {
+	c := NewNVMe(map[string]string{})
+	devicesAndNamespaces, _ := c.ListNVMeDeviceAndNamespace()
+
+	if len(devicesAndNamespaces) > 0 {
+		for _, device := range devicesAndNamespaces {
+			DevicePath := device.DevicePath
+			_, _, err := c.GetNVMeDeviceData(DevicePath)
+			if err != nil {
+				t.Error(err.Error())
+			}
+		}
+	}
+}
+
+func TestGetNVMeDeviceDatatest(t *testing.T) {
+	var c NVMEinterface
+	opts := map[string]string{}
+	c = NewNVMe(opts)
+	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestGetNVMeDeviceDataError(t *testing.T) {
+	var c NVMEinterface
+	opts := map[string]string{}
+	c = NewNVMe(opts)
+	// GONVMEMock.InducedNVMeDeviceDataError = true
+	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+}
