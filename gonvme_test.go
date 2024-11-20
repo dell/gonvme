@@ -94,9 +94,24 @@ func TestPolymorphichCapability(t *testing.T) {
 
 func TestDiscoverNVMeTCPTargets(t *testing.T) {
 	reset()
+	mockOutput := `=====Discovery Log Entry 0======
+trtype:  tcp
+adrfam:  ipv4
+subtype: nvme subsystem
+treq:    not specified
+portid:  4420
+trsvcid: 4420
+subnqn:  nqn.1988-11.com.dell:powerstore:00:1a1111a1111aAA11111A
+traddr:  10.0.0.1
+sectype: none
+`
+
+	cmdCommandFunc := func([]string) ([]byte, error) {
+		return []byte(mockOutput), nil
+	}
 	c := NewNVMe(map[string]string{})
-	_, err := c.DiscoverNVMeTCPTargets(tcpTestPortal, false)
-	if err == nil {
+	_, err := c.discoverNVMeTCPTargets(tcpTestPortal, false, cmdCommandFunc)
+	if err != nil {
 		t.Error(err.Error())
 	}
 }
@@ -104,7 +119,23 @@ func TestDiscoverNVMeTCPTargets(t *testing.T) {
 func TestDiscoverNVMeFCTargets(t *testing.T) {
 	reset()
 	c := NewNVMe(map[string]string{})
-	_, err := c.DiscoverNVMeFCTargets(fcTestPortal, false)
+	mockOutput := `=====Discovery Log Entry 0======
+trtype:  fc
+adrfam:  fibre-channel
+subtype: nvme subsystem
+treq:    not specified
+portid:  0
+trsvcid: none
+subnqn:  nqn.1111-11.com.dell:powerstore:00:a1a1a1a111a1111a111a
+traddr:  nn-0x11aaa111a1111a11:aa-0x11aaa11111111a11
+`
+	cmdCommandFunc := func([]string) ([]byte, error) {
+		return []byte(mockOutput), nil
+	}
+	_, err := c.discoverNVMeFCTargets(fcTestPortal, false, cmdCommandFunc)
+	if err !=  nil {
+		t.Error(err.Error())
+	}
 	FCHostsInfo, err := c.getFCHostInfo()
 	if err == nil && len(FCHostsInfo) != 0 {
 		_, err := c.DiscoverNVMeFCTargets(fcTestPortal, false)
