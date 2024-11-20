@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // Mock function to replace os.Stat in tests
@@ -466,4 +467,52 @@ func (m mockCommand) Output() ([]byte, error) {
 		return nil, m.err
 	}
 	return m.out, nil
+}
+
+type MockCommand struct {
+	mock.Mock
+}
+
+var tcpTestPortal string
+
+func TestDiscoverNVMeTCPTargets(t *testing.T) {
+	mockOutput := `=====Discovery Log Entry 0======
+trtype:  tcp
+adrfam:  ipv4
+subtype: nvme subsystem
+treq:    not specified
+portid:  4420
+trsvcid: 4420
+subnqn:  nqn.1988-11.com.dell:powerstore:00:1a1111a1111aAA11111A
+traddr:  10.0.0.1
+sectype: none
+`
+
+tcpTestPortal = "1.1.1.1"
+
+	cmdCommandFunc := func([]string) ([]byte, error) {
+		return []byte(mockOutput), nil
+	}
+	c := NewNVMe(map[string]string{})
+	_, err := c.discoverNVMeTCPTargets(tcpTestPortal, false, cmdCommandFunc)
+	if err != nil {
+		t.Error(err.Error())
+	}
+}
+
+func TestMockDiscoverNVMEFCTargets(t *testing.T) {
+	var c NVMEinterface
+	MockNumberOfFCTargets := "numberOfFCTargets"
+	opts := map[string]string{}
+	expected := 5
+	opts[MockNumberOfFCTargets] = "5"
+	c = NewNVMe(opts)
+	// c = mock
+	targets, err := c.DiscoverNVMeFCTargets("nn-0x11aaa111111a1a1a:pn-0x11aaa111111a1a1a", true)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if len(targets) != expected {
+		t.Errorf("Expected to find %d targets, but got back %v", expected, targets)
+	}
 }

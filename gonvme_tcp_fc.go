@@ -53,7 +53,6 @@ var (
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 )
-
 type command interface {
 	Output() ([]byte, error)
 }
@@ -62,10 +61,22 @@ var getCommand = func(name string, arg ...string) command {
 	return exec.Command(name, arg...)
 }
 
+type CmdOutputFunc func([]string) ([]byte, error)
+
 // NVMe provides many nvme-specific functions
 type NVMe struct {
 	NVMeType
 	sessionParser NVMeSessionParser
+}
+
+func cmdCommand(args []string) ([]byte, error) {
+	cmd := exec.Command(args[0], args[1:]...) // #nosec G204
+	out, err := cmd.Output()
+	if err != nil {
+		log.Errorf("\nError executing the command: %v", err)
+		return nil, err
+	}
+	return out, nil
 }
 
 // NewNVMe - returns a new NVMe client
@@ -138,17 +149,17 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 
 // DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of NVMeTCP targets.
 func (nvme *NVMe) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
-	return nvme.discoverNVMeTCPTargets(address, login)
+	return nvme.discoverNVMeTCPTargets(address, login, cmdCommand)
 }
 
-func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool, commandFunc CmdOutputFunc) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
-	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	// cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
-	out, err := cmd.Output()
+	out, err := commandFunc(exe)
 	if err != nil {
 		log.Errorf("\nError discovering %s: %v", address, err)
 		return []NVMeTarget{}, err
@@ -265,10 +276,10 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 
 // DiscoverNVMeFCTargets - runs nvme discovery and returns a list of NVMeFC targets.
 func (nvme *NVMe) DiscoverNVMeFCTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
-	return nvme.discoverNVMeFCTargets(targetAddress, login)
+	return nvme.discoverNVMeFCTargets(targetAddress, login, cmdCommand)
 }
 
-func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVMeTarget, error) {
+func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool, commandFunc CmdOutputFunc) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t fc -a traddr -w host_traddr
@@ -287,9 +298,9 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
 		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
-		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+		// cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
-		out, err = cmd.Output()
+		out, err = commandFunc(exe)
 		if err != nil {
 			continue
 		}
