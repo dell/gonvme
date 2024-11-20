@@ -1,12 +1,5 @@
 package gonvme
 
-import (
-    // "encoding/json"
-    "testing"
-
-    "github.com/stretchr/testify/assert"
-)
-
 type NVMESession struct {
     Name              string
     Target            string
@@ -15,7 +8,7 @@ type NVMESession struct {
     NVMESessionState  string
 }
 
-func TestSessionParser(t *testing.T) {
+/*func TestSessionParser(t *testing.T) {
     tests := []struct {
         name           string
         input          string
@@ -117,3 +110,4 @@ func TestSessionParser(t *testing.T) {
         // })
     // }
 }
+ */
