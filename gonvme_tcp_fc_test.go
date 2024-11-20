@@ -5,6 +5,9 @@ import (
 	"os"
 	"testing"
 	"time"
+	"fmt"
+    "syscall"
+	"os/exec"
 	
 	"encoding/json"
 	"strings"
@@ -857,4 +860,41 @@ func TestDeviceRescan(t *testing.T) {
 		t.Error("Expected an induced error but got nil")
 		return
 	}
+}
+
+type MockExitError struct {
+    *exec.ExitError
+    status syscall.WaitStatus
+}
+
+func (e *MockExitError) Sys() interface{} {
+    return e.status
+}
+
+func TestIsNoObjsExitCode(t *testing.T) {
+    // Test case: error is nil
+    err := error(nil)
+    result := isNoObjsExitCode(err)
+    assert.False(t, result, "Expected false when error is nil")
+
+    // Test case: error is not an exec.ExitError
+    err = fmt.Errorf("some other error")
+    result = isNoObjsExitCode(err)
+    assert.False(t, result, "Expected false when error is not an exec.ExitError")
+
+    // Test case: error is an exec.ExitError with a different exit code
+    exitError := &MockExitError{
+        status: syscall.WaitStatus(1), // Replace 1 with a different exit code
+    }
+    err = exitError
+    result = isNoObjsExitCode(err)
+    assert.False(t, result, "Expected false when exit code is different")
+
+    // Test case: error is an exec.ExitError with the specific exit code
+    exitError = &MockExitError{
+        status: syscall.WaitStatus(NVMeNoObjsFoundExitCode),
+    }
+    err = exitError
+    result = isNoObjsExitCode(err)
+    assert.True(t, result, "Expected true when exit code matches NVMeNoObjsFoundExitCode")
 }
