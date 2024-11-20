@@ -5,10 +5,36 @@ import (
 	"os"
 	"testing"
 	"time"
-
+	
+	"encoding/json"
+	"strings"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	log "github.com/sirupsen/logrus"
 )
+
+type testData struct {
+	TCPPortal     string
+	FCPortal      string
+	Target        string
+	FCHostAddress string
+}
+
+func reset() {
+	testValuesFile, err := os.ReadFile("testdata/unittest_values.json")
+	if err != nil {
+		log.Infof("Error Reading the file: %s ", err)
+	}
+	var testValues testData
+	err = json.Unmarshal(testValuesFile, &testValues)
+	if err != nil {
+		log.Infof("Error during unmarshal: %s", err)
+	}
+	tcpTestPortal = testValues.TCPPortal
+	fcTestPortal = testValues.FCPortal
+	testTarget = testValues.Target
+	hostAddress = testValues.FCHostAddress
+}
 
 // Mock function to replace os.Stat in tests
 type MockFileSystem struct{}
@@ -488,7 +514,8 @@ traddr:  10.0.0.1
 sectype: none
 `
 
-tcpTestPortal = "1.1.1.1"
+// tcpTestPortal = "1.1.1.1"
+reset()
 
 	cmdCommandFunc := func([]string) ([]byte, error) {
 		return []byte(mockOutput), nil
@@ -519,7 +546,9 @@ func TestMockDiscoverNVMEFCTargets(t *testing.T) {
 
 var testTarget string
 func TestNVMeTCPLoginLogoutTargets(t *testing.T) {
-	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	reset()
+
 	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
 		Portal:     tcpTestPortal,
@@ -552,9 +581,11 @@ var fcTestPortal string
 var hostAddress string
 
 func TestNVMeFCLoginLogoutTargets(t *testing.T) {
-	fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
-	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	hostAddress = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	// fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// hostAddress = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	reset()
+
 	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
 		Portal:     fcTestPortal,
@@ -585,8 +616,10 @@ func TestNVMeFCLoginLogoutTargets(t *testing.T) {
 }
 
 func TestLoginLoginLogoutTargets(t *testing.T) {
-	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	tcpTestPortal = "1.1.1.1"
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// tcpTestPortal = "1.1.1.1"
+	reset()
+
 	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
 		Portal:     tcpTestPortal,
@@ -621,8 +654,10 @@ func TestLoginLoginLogoutTargets(t *testing.T) {
 }
 
 func TestLogoutLogoutTargets(t *testing.T) {
-	testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
-	tcpTestPortal = "1.1.1.1"
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// tcpTestPortal = "1.1.1.1"
+	reset()
+
 	c := NewNVMe(map[string]string{})
 	tgt := NVMeTarget{
 		Portal:     tcpTestPortal,
@@ -680,6 +715,101 @@ func TestGetNVMeDeviceDataError(t *testing.T) {
 	// GONVMEMock.InducedNVMeDeviceDataError = true
 	_, _, err := c.GetNVMeDeviceData("/nvmeMock/0n1")
 	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+}
+
+func TestMockNVMeTCPLoginTargetsError(t *testing.T) {
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// tcpTestPortal = "1.1.1.1"
+	reset()
+
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     tcpTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "tcp",
+	}
+	// GONVMEMock.InduceTCPLoginError = true
+	err := c.NVMeTCPConnect(tgt, false)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+}
+
+func TestMockNVMeFCLoginTargetsError(t *testing.T) {
+	// fcTestPortal = "nn-0x11aaa111a1111a1a:pn-0x11aaa11111111a1a"
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	reset()
+
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     fcTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "fc",
+		AdrFam:     "fibre-channel",
+		SubType:    "nvme subsystem",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "fc",
+		HostAdr:    hostAddress,
+	}
+	// GONVMEMock.InduceFCLoginError = true
+	err := c.NVMeFCConnect(tgt, false)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
+		t.Error("Expected an induced error")
+		return
+	}
+}
+
+func TestMockLogoutTargetsError(t *testing.T) {
+	// testTarget = "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D"
+	// tcpTestPortal = "1.1.1.1"
+	reset()
+	c := NewNVMe(map[string]string{})
+	tgt := NVMeTarget{
+		Portal:     tcpTestPortal,
+		TargetNqn:  testTarget,
+		TrType:     "tcp",
+		AdrFam:     "fibre-channel",
+		SubType:    "ipv4",
+		Treq:       "not specified",
+		PortID:     "0",
+		TrsvcID:    "none",
+		SecType:    "none",
+		TargetType: "tcp",
+	}
+	// GONVMEMock.InduceLogoutError = true
+	err := c.NVMeTCPConnect(tgt, false)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+	err = c.NVMeDisconnect(tgt)
+	if err == nil {
+		t.Error("Expected an induced error")
+		return
+	}
+	if !strings.Contains(err.Error(), "induced") {
 		t.Error("Expected an induced error")
 		return
 	}
