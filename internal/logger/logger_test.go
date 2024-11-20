@@ -14,39 +14,39 @@
  *
  */
 
- package logger
+package logger
 
- import (
-	 "context"
-	 "testing"
- )
+import (
+	"context"
+	"testing"
+)
 
- func TestLogger(t *testing.T) {
-	 tests := []struct {
-		 name string
-		 fn   func(ctx context.Context, format string, args ...interface{})
-	 }{
-		 {
-			 name: "Info",
-			 fn:   Info,
-		 },
-		 {
-			 name: "Debug",
-			 fn:   Debug,
-		 },
-		 {
-			 name: "Error",
-			 fn:   Error,
-		 },
-	 }
-	 for _, tt := range tests {
-		 t.Run(tt.name, func(t *testing.T) {
-			 oldLogger := logger
-			 defer func() {
-				 logger = oldLogger
-			 }()
-			 logger = &DummyLogger{}
-			 tt.fn(context.Background(), "test")
-		 })
-	 }
- }
+func TestLogger(t *testing.T) {
+	tests := []struct {
+		name string
+		fn   func(ctx context.Context, format string, args ...interface{})
+	}{
+		{
+			name: "Info",
+			fn:   Info,
+		},
+		{
+			name: "Debug",
+			fn:   Debug,
+		},
+		{
+			name: "Error",
+			fn:   Error,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldLogger := logger
+			defer func() {
+				logger = oldLogger
+			}()
+			logger = &DummyLogger{}
+			tt.fn(context.Background(), "test")
+		})
+	}
+}

@@ -3,8 +3,8 @@ package tracer
 import (
 	"bytes"
 	"context"
-	"testing"
 	"fmt"
+	"testing"
 )
 
 type mockTracer struct {
