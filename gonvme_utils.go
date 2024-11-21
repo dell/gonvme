@@ -63,7 +63,13 @@ func (sp *sessionParser) Parse(data []byte) []NVMESession {
 				session.Name = path["Name"]
 				session.NVMETransportName = NVMETransportName(path["Transport"])
 				if path["Transport"] == NVMeTransportTypeFC {
-					session.Portal = strings.Split(strings.Fields(path["Address"])[0], "=")[1]
+					fields := strings.Fields(path["Address"])
+					if len(fields) > 0 {
+						parts := strings.Split(fields[0], "=")
+						if len(parts) > 1 {
+							session.Portal = parts[1]
+						}
+					}
 				} else if path["Transport"] == NVMeTransportTypeTCP {
 					if re.MatchString(path["Address"]) {
 						ip := re.FindString(path["Address"])
@@ -74,15 +80,19 @@ func (sp *sessionParser) Parse(data []byte) []NVMESession {
 								break
 							}
 						}
-						port := strings.ReplaceAll(strings.Split(portHolder, "=")[1], "\"", "")
-						session.Portal = ip + ":" + port
+						if portHolder != "" {
+							portParts := strings.Split(portHolder, "=")
+							if len(portParts) > 1 {
+								port := strings.ReplaceAll(portParts[1], "\"", "")
+								session.Portal = ip + ":" + port
+							}
+						}
 					}
 				} else {
 					continue
 				}
 				session.NVMESessionState = NVMESessionState(path["State"])
 				result = append(result, session)
-
 			}
 		}
 	}
