@@ -36,9 +36,6 @@ const (
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
 
-	// NVMeCommand - nvme command
-	NVMeCommand = "nvme"
-
 	// NVMePort - port number
 	NVMePort = "4420"
 
@@ -50,13 +47,12 @@ const (
 	NVMeNoObjsFoundExitCode = 21
 )
 
-// NVMe provides many nvme-specific functions
 type NVMe struct {
 	NVMeType
 	sessionParser NVMeSessionParser
+	NVMeCommand   string
 }
 
-// NewNVMe - returns a new NVMe client
 func NewNVMe(opts map[string]string) *NVMe {
 	nvme := NVMe{
 		NVMeType: NVMeType{
@@ -65,6 +61,28 @@ func NewNVMe(opts map[string]string) *NVMe {
 		},
 	}
 	nvme.sessionParser = &sessionParser{}
+
+	paths := []string{"/sbin/nvme"}
+	for _, path := range paths {
+		pathCopy := path
+		if nvme.getChrootDirectory() != "/" {
+			path = nvme.getChrootDirectory() + path
+		}
+
+		info, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			log.Errorf("Error: Path %s does not exist\n", path)
+		} else if err != nil {
+			log.Errorf("Error: Unable to access path %s: %v\n", path, err)
+		} else if info.IsDir() {
+			log.Errorf("Error: Path %s is a directory, not an executable\n", path)
+		} else {
+			log.Infof("Success: Path %s exists and is an executable\n", path)
+			nvme.NVMeCommand = pathCopy
+			log.Infof("nvme.NVMeCommand: %s", nvme.NVMeCommand)
+			break
+		}
+	}
 	return &nvme
 }
 
@@ -133,7 +151,9 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
-	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
+	exe := nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
+	log.Infof("Executing command: %s", strings.Join(exe, " "))
+
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	out, err := cmd.Output()
@@ -274,7 +294,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 
 		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
-		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
+		exe := nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
 		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 		out, err = cmd.Output()
@@ -459,9 +479,9 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	// D allows duplicate connections between same transport host and subsystem port
 	var exe []string
 	if duplicateConnect {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1", "-D"})
+		exe = nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1", "-D"})
 	} else {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1"})
+		exe = nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1"})
 	}
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
@@ -528,9 +548,9 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	// D allows duplicate connections between same transport host and subsystem port
 	var exe []string
 	if duplicateConnect {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1", "-D"})
+		exe = nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1", "-D"})
 	} else {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1"})
+		exe = nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1"})
 	}
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
@@ -592,7 +612,7 @@ func (nvme *NVMe) NVMeDisconnect(target NVMeTarget) error {
 func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
-	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
+	exe := nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "disconnect", "-n", target.TargetNqn})
 	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	_, err := cmd.Output()
