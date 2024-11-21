@@ -843,12 +843,12 @@ func (nvme *NVMe) GetSessions() ([]NVMESession, error) {
 	/*
 		[
 		  {
-		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6f08058a-af91-46bf-8311-a60da3a10348",
-		    "HostID":"6f08058a-af91-46bf-8311-a60da3a10348",
+		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:1a11111a-aa11-11aa-1111-a10aa1a11111",
+		    "HostID":"1a11111a-aa11-11aa-1111-a11aa1a1111",
 		    "Subsystems":[
 		      {
 		        "Name":"nvme-subsys0",
-		        "NQN":"nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+		        "NQN":"nqn.1988-11.com.dell:mock:00:1a1111a1111aA11111A",
 		        "IOPolicy":"numa",
 		        "Paths":[
 		          {

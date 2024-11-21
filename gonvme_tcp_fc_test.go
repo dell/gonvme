@@ -371,12 +371,12 @@ func TestGetSessions(t *testing.T) {
 				return &mockCommand{
 					out: []byte(`[
 		  {
-		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6f08058a-af91-46bf-8311-a60da3a10348",
+		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:1a11111a-aa11-11aa-1111-a11aa1a11111",
 		    "HostID":"6f08058a-af91-46bf-8311-a60da3a10348",
 		    "Subsystems":[
 		      {
 		        "Name":"nvme-subsys0",
-		        "NQN":"nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+		        "NQN":"nqn.1988-11.com.dell:mock:00:1a1111a1111aAA11111A",
 		        "IOPolicy":"numa",
 		        "Paths":[
 		          {
@@ -400,14 +400,14 @@ func TestGetSessions(t *testing.T) {
 			},
 			[]NVMESession{
 				{
-					Target:            "nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+					Target:            "nqn.1988-11.com.dell:mock:00:1a1111a1111aAA11111A",
 					Portal:            "10.1.1.1:4420",
 					Name:              "nvme3",
 					NVMETransportName: "tcp",
 					NVMESessionState:  "live",
 				},
 				{
-					Target:            "nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+					Target:            "nqn.1988-11.com.dell:mock:00:1a1111a1111aAA11111A",
 					Portal:            "10.1.1.2:4420",
 					Name:              "nvme2",
 					NVMETransportName: "tcp",
@@ -572,7 +572,7 @@ anagrpid: 2
 nsattr  : 0
 nvmsetid: 0
 endgid  : 0
-nguid   : 507911ecda65a2498ccf0968009a5d07
+nguid   : 111111aaaa11a1111aaa1111111a1a11
 eui64   : 0000000000000000
 lbaf  0 : ms:0   lbads:9  rp:0 (in use)
 	`
@@ -591,8 +591,8 @@ lbaf  0 : ms:0   lbads:9  rp:0 (in use)
 		t.Error(err.Error())
 	}
 
-	if guid != "507911ecda65a2498ccf0968009a5d07" {
-		t.Errorf("want %s, got %s", "507911ecda65a2498ccf0968009a5d07", guid)
+	if guid != "111111aaaa11a1111aaa1111111a1a11" {
+		t.Errorf("want %s, got %s", "111111aaaa11a1111aaa1111111a1a11", guid)
 	}
 
 	if namespace != "149" {
@@ -633,7 +633,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 			"successfully connects",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -648,7 +648,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 			"error connecting",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -663,7 +663,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 			"error connecting with code 114",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -703,7 +703,7 @@ func TestNVMeFCConnect(t *testing.T) {
 			"successfully connects",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -718,7 +718,7 @@ func TestNVMeFCConnect(t *testing.T) {
 			"error connecting",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -733,7 +733,7 @@ func TestNVMeFCConnect(t *testing.T) {
 			"error connecting with code 114",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
 			func(_ string, _ ...string) command {
@@ -772,7 +772,7 @@ func TestNVMeDisconnect(t *testing.T) {
 			"successfully disconnects",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			func(_ string, _ ...string) command {
 				return &mockCommand{
@@ -785,7 +785,7 @@ func TestNVMeDisconnect(t *testing.T) {
 			"error disconnecting",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
-				TargetNqn: "nqn.1988-11.com.mock:00:e6e2d5b871f1403E169D",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			func(_ string, _ ...string) command {
 				return &mockCommand{
