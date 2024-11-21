@@ -7,14 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// type NVMESession struct {
-//     Name              string
-//     Target            string
-//     NVMETransportName string
-//     Portal            string
-//     NVMESessionState  string
-// }
-
 func TestSessionParser(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -80,39 +72,4 @@ func TestSessionParser(t *testing.T) {
 			assert.Equal(t, tt.expectedResult, result)
 		})
 	}
-
-	// NVMESession := Parse(tests)
-
-	// for _, tt := range tests {
-	// t.Run(tt.name, func(t *testing.T) {
-	//     var result struct {
-	//         Subsystems []struct {
-	//             Name  string
-	//             NQN   string
-	//             Paths []struct {
-	//                 Transport string
-	//                 Address   string
-	//                 State     string
-	//             }
-	//         }
-	//     }
-	//     err := json.Unmarshal([]byte(tt.input), &result)
-	//     assert.NoError(t, err)
-
-	//     var sessions []NVMESession
-	//     for _, subsystem := range result.Subsystems {
-	//         for _, path := range subsystem.Paths {
-	//             sessions = append(sessions, NVMESession{
-	//                 Name:              subsystem.Name,
-	//                 Target:            subsystem.NQN,
-	//                 NVMETransportName: path.Transport,
-	//                 Portal:            path.Address,
-	//                 NVMESessionState:  path.State,
-	//             })
-	//         }
-	//     }
-
-	//     assert.Equal(t, tt.expectedResult, sessions)
-	// })
-	// }
 }
