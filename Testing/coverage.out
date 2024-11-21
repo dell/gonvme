@@ -1,0 +1,9 @@
+mode: set
+github.com/dell/gonvme/Testing/gonvme_utils.go:44.60,46.20 2 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:46.20,48.4 1 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:49.3,52.17 4 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:52.17,55.4 2 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:56.3,56.33 1 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:56.33,57.43 1 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:57.43,87.5 2 0
+github.com/dell/gonvme/Testing/gonvme_utils.go:89.3,89.16 1 0

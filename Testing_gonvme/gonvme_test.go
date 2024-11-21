@@ -9,31 +9,31 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// type NVMESession struct {
-//     Name              string
-//     Target            string
-//     NVMETransportName string
-//     Portal            string
-//     NVMESessionState  string
-// }
+type NVMESession struct {
+    Name              string
+    Target            string
+    NVMETransportName string
+    Portal            string
+    NVMESessionState  string
+}
 
-// type NVMeTarget struct {
-// 	Portal     string
-// 	TargetNqn  string
-// 	TrType     string
-// 	AdrFam     string
-// 	SubType    string
-// 	Treq       string
-// 	PortID     string
-// 	TrsvcID    string
-// 	SecType    string
-// 	TargetType string
-// 	HostAdr    string
-// }
-// type DevicePathAndNamespace struct {
-// 	DevicePath string
-// 	Namespace  string
-// }
+type NVMeTarget struct {
+	Portal     string
+	TargetNqn  string
+	TrType     string
+	AdrFam     string
+	SubType    string
+	Treq       string
+	PortID     string
+	TrsvcID    string
+	SecType    string
+	TargetType string
+	HostAdr    string
+}
+type DevicePathAndNamespace struct {
+	DevicePath string
+	Namespace  string
+}
 
 // type Logger interface {
 // 	Info(ctx context.Context, format string, args ...interface{})

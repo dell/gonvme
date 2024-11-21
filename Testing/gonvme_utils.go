@@ -24,6 +24,31 @@
  
 	 log "github.com/sirupsen/logrus"
  )
+
+type NVMESessionState string
+type NVMETransportName string
+
+const (
+	// NVMeTransportTypeTCP - Placeholder for NVMe Transport type TCP
+	NVMeTransportTypeTCP = "tcp"
+
+	// NVMeTransportTypeFC - Placeholder for NVMe Transport type FC
+	NVMeTransportTypeFC = "fc"
+
+	// NVMESessionStateLive indicates the NVMe connection state as live
+	// NVMESessionStateLive NVMESessionState = "live"
+	// // NVMESessionStateDeleting indicates the NVMe connection state as deleting
+	// NVMESessionStateDeleting NVMESessionState = "deleting"
+	// // NVMESessionStateConnecting indicates the NVMe connection state as connecting
+	// NVMESessionStateConnecting NVMESessionState = "connecting"
+
+	// NVMETransportNameTCP indicates the NVMe protocol as tcp
+	// NVMETransportNameTCP NVMETransportName = "tcp"
+	// // NVMETransportNameFC indicates the NVMe protocol as fc
+	// NVMETransportNameFC NVMETransportName = "fc"
+	// // NVMETransportNameRDMA indicates the NVMe protocol as rdma
+	// NVMETransportNameRDMA NVMETransportName = "rdma"
+)
  
  type sessionParser struct{}
  
@@ -61,7 +86,7 @@
             re := regexp.MustCompilePOSIX(reAdd)
             for _, path := range system.Paths {
                 session.Name = path["Name"]
-                session.NVMETransportName = NVMETransportName(path["Transport"]) 
+                session.NVMETransportName = string(NVMETransportName(path["Transport"])) // Convert to string
                 if path["Transport"] == NVMeTransportTypeFC {
                     fields := strings.Fields(path["Address"])
                     if len(fields) > 0 {
@@ -91,7 +116,7 @@
                 } else {
                     continue
                 }
-                session.NVMESessionState = NVMESessionState(path["State"])
+                session.NVMESessionState = string(NVMESessionState(path["State"])) // Convert to string
                 result = append(result, session)
             }
         }

@@ -33,7 +33,6 @@ type Tracer = tracer.Tracer
 
 // NVMEinterface is the interface that provides the NVMe client functionality
 type NVMEinterface interface {
-
 	// DiscoverNVMeTCPTargets discovers the targets exposed via a given portal
 	// returns an array of NVMeTCP Target instances
 	DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error)
@@ -46,10 +45,10 @@ type NVMEinterface interface {
 	// To use the system default file of "/etc/nvme/hostnqn", provide a filename of ""
 	GetInitiators(filename string) ([]string, error)
 
-	//NVMeTCPConnect connects into a specified NVMeTCP target
+	// NVMeTCPConnect connects into a specified NVMeTCP target
 	NVMeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 
-	//NVMeFCConnect connects into a specified NVMeFC target
+	// NVMeFCConnect connects into a specified NVMeFC target
 	NVMeFCConnect(target NVMeTarget, duplicateConnect bool) error
 
 	// NVMeDisconnect disconnect from the specified NVMe target
@@ -70,6 +69,9 @@ type NVMEinterface interface {
 	// generic implementations
 	isMock() bool
 	getOptions() map[string]string
+
+	// DeviceRescan rescan the NVMe controller device
+	DeviceRescan(device string) error
 }
 
 // NVMeType is the base structure for each platform implementation

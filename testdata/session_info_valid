@@ -1,4 +1,6 @@
 {
+  "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:705f2142-696e-48ff-42df-310e5424dfd1",
+  "HostID":"705f2142-696e-48ff-42df-310e5424dfd1",
   "Subsystems" : [
     {
       "Name" : "nvme-subsys0",
@@ -7,13 +9,13 @@
         {
           "Name" : "nvme0",
           "Transport" : "tcp",
-          "Address" : "traddr=10.230.1.1 trsvcid=4420",
+          "Address" : "traddr=10.230.1.1,trsvcid=4420",
           "State" : "live"
         },
         {
           "Name" : "nvme1",
           "Transport" : "tcp",
-          "Address" : "traddr=10.230.1.2 trsvcid=4420",
+          "Address" : "traddr=10.230.1.2,trsvcid=4420,src_addr=10.230.1.4",
           "State" : "deleting"
         }
       ]

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2024 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,19 +33,34 @@ const (
 	// ChrootDirectory allows the nvme commands to be run within a chrooted path, helpful for containerized services
 	ChrootDirectory = "chrootDirectory"
 
-	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
-	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
-
 	// NVMeCommand - nvme command
 	NVMeCommand = "nvme"
 
 	// NVMePort - port number
 	NVMePort = "4420"
 
+	// NVMEAlreadyConnected contains output holder for nvme connect
+	NVMEAlreadyConnected = "already connected"
+
 	// NVMeNoObjsFoundExitCode exit code indicates that no records/targets/sessions/portals
 	// found to execute operation on
 	NVMeNoObjsFoundExitCode = 21
 )
+
+var (
+	fcHostPath = "/sys/class/fc_host/host*"
+
+	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
+	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
+)
+
+type command interface {
+	Output() ([]byte, error)
+}
+
+var getCommand = func(name string, arg ...string) command {
+	return exec.Command(name, arg...)
+}
 
 // NVMe provides many nvme-specific functions
 type NVMe struct {
@@ -83,8 +98,7 @@ func (nvme *NVMe) buildNVMeCommand(cmd []string) []string {
 }
 
 func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
-
-	match, err := filepath.Glob("/sys/class/fc_host/host*")
+	match, err := filepath.Glob(fcHostPath)
 	if err != nil {
 		log.Errorf("Error gathering fc hosts: %v", err)
 		return []FCHBAInfo{}, err
@@ -98,14 +112,16 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 	for _, m := range match {
 
 		var FCHostInfo FCHBAInfo
-		data, err := os.ReadFile(path.Join(m, "port_name"))
+		portNamePath := path.Join(m, "port_name")
+		data, err := os.ReadFile(filepath.Clean(portNamePath))
 		if err != nil {
 			log.Errorf("match: %s failed to read port_name file: %s", match, err.Error())
 			continue
 		}
 		FCHostInfo.PortName = strings.TrimSpace(string(data))
 
-		data, err = os.ReadFile(path.Join(m, "node_name"))
+		nodeNamePath := path.Join(m, "node_name")
+		data, err = os.ReadFile(filepath.Clean(nodeNamePath))
 		if err != nil {
 			log.Errorf("match: %s failed to read node_name file: %s", match, err.Error())
 			continue
@@ -130,7 +146,7 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -271,7 +287,7 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 		// host_traddr = nn-<Initiator_WWNN>:pn-<Initiator_WWPN>
 		initiatorAddress := strings.Replace(fmt.Sprintf("nn-%s:pn-%s", FCHostInfo.NodeName, FCHostInfo.PortName), "\n", "", -1)
 		exe := nvme.buildNVMeCommand([]string{NVMeCommand, "discover", "-t", "fc", "-a", targetAddress, "-w", initiatorAddress})
-		cmd := exec.Command(exe[0], exe[1:]...)
+		cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 		out, err = cmd.Output()
 		if err != nil {
@@ -398,7 +414,6 @@ func (nvme *NVMe) GetInitiators(filename string) ([]string, error) {
 }
 
 func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
-
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
 	nqns := []string{}
@@ -425,14 +440,13 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 		}
 
 		// get the contents of the initiator config file
-		out, err := os.ReadFile(init)
+		out, err := os.ReadFile(filepath.Clean(init))
 		if err != nil {
 			log.Errorf("Error gathering initiator names: %v", err)
 		}
 		lines := strings.Split(string(out), "\n")
 
 		for _, line := range lines {
-
 			if line != "" {
 				nqns = append(nqns, line)
 			}
@@ -457,12 +471,11 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	// D allows duplicate connections between same transport host and subsystem port
 	var exe []string
 	if duplicateConnect {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "-D"})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1", "-D"})
 	} else {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "tcp", "-n", target.TargetNqn, "-a", target.Portal, "-s", NVMePort, "--ctrl-loss-tmo=-1"})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...)
-
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
@@ -471,6 +484,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	for scanner.Scan() {
 		Output = scanner.Text()
 	}
+	log.Debugf("connect output: %s", Output)
 	err = cmd.Wait()
 
 	if err != nil {
@@ -491,13 +505,13 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, "already connnected") {
+			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
 				err = nil
 			} else {
-				log.Errorf("\nnvme connect failure: %v", err)
+				log.Errorf("\nnvme connect failure: %v, %s", err, err.Error())
 			}
 		} else {
 			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
@@ -526,11 +540,11 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	// D allows duplicate connections between same transport host and subsystem port
 	var exe []string
 	if duplicateConnect {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "-D"})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1", "-D"})
 	} else {
-		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn})
+		exe = nvme.buildNVMeCommand([]string{NVMeCommand, "connect", "-t", "fc", "-a", target.Portal, "-w", target.HostAdr, "-n", target.TargetNqn, "--ctrl-loss-tmo=-1"})
 	}
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 	var Output string
 	stderr, _ := cmd.StderrPipe()
 	err := cmd.Start()
@@ -559,7 +573,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, "already connnected") {
+			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
@@ -591,7 +605,7 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	// nvme disconnect is done via the nvme cli
 	// nvme disconnect -n <target NQN>
 	exe := nvme.buildNVMeCommand([]string{NVMeCommand, "disconnect", "-n", target.TargetNqn})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	_, err := cmd.Output()
 
@@ -606,7 +620,6 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 
 // ListNVMeDeviceAndNamespace returns the NVME Device Paths and Namespace of each of the NVME device
 func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error) {
-
 	/* ListNVMeDeviceAndNamespace Output
 	{/dev/nvme0n1 54}
 	{/dev/nvme0n2 55}
@@ -645,7 +658,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 	  ]
 	}
 	*/
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -694,7 +707,6 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 
 // ListNVMeNamespaceID returns the namespace IDs for each NVME device path
 func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndNamespace) (map[DevicePathAndNamespace][]string, error) {
-
 	/* ListNVMeNamespaceID Output
 	{devicePath namespace} [namespaceId1 namespaceId2]
 	{/dev/nvme0n1 54} [0x36 0x37]
@@ -714,7 +726,7 @@ func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndName
 		[   0]:0x2401
 		[   1]:0x2406
 		*/
-		cmd := exec.Command(exe[0], exe[1:]...)
+		cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 		output, err := cmd.Output()
 		if err != nil {
 			continue
@@ -745,12 +757,11 @@ func (nvme *NVMe) ListNVMeNamespaceID(NVMeDeviceAndNamespace []DevicePathAndName
 
 // GetNVMeDeviceData returns the information (nguid and namespace) of an NVME device path
 func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
-
 	var nguid string
 	var namespace string
 
 	exe := nvme.buildNVMeCommand([]string{"nvme", "id-ns", path})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
 
 	/*
 		nvme id-ns /dev/nvme3n1 0x95
@@ -788,9 +799,9 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 		lbaf  0 : ms:0   lbads:9  rp:0 (in use)
 	*/
 
-	output, error := cmd.Output()
-	if error != nil {
-		return "", "", error
+	output, err := cmd.Output()
+	if err != nil {
+		return "", "", err
 	}
 	str := string(output)
 	lines := strings.Split(str, "\n")
@@ -811,13 +822,44 @@ func (nvme *NVMe) GetNVMeDeviceData(path string) (string, string, error) {
 			return nguid, namespace, nil
 		}
 	}
-	return nguid, namespace, error
+	return nguid, namespace, err
 }
 
 // GetSessions queries information about  NVMe sessions
 func (nvme *NVMe) GetSessions() ([]NVMESession, error) {
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list-subsys", "-o", "json"})
-	cmd := exec.Command(exe[0], exe[1:]...)
+	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
+
+	/*
+		[
+		  {
+		    "HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6f08058a-af91-46bf-8311-a60da3a10348",
+		    "HostID":"6f08058a-af91-46bf-8311-a60da3a10348",
+		    "Subsystems":[
+		      {
+		        "Name":"nvme-subsys0",
+		        "NQN":"nqn.1988-11.com.dell:powerstore:00:1b7322d7546dFD05675D",
+		        "IOPolicy":"numa",
+		        "Paths":[
+		          {
+		            "Name":"nvme3",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.1,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          },
+		          {
+		            "Name":"nvme2",
+		            "Transport":"tcp",
+		            "Address":"traddr=10.1.1.2,trsvcid=4420,src_addr=10.1.1.2",
+		            "State":"live"
+		          },
+		        ]
+		      }
+		    ]
+		  }
+		]
+	*/
+
 	output, err := cmd.Output()
 	if err != nil {
 		if isNoObjsExitCode(err) {
@@ -835,4 +877,15 @@ func isNoObjsExitCode(err error) bool {
 		}
 	}
 	return false
+}
+
+// DeviceRescan rescan the NVMe controller device
+func (nvme *NVMe) DeviceRescan(device string) error {
+	exe := nvme.buildNVMeCommand([]string{"nvme", "ns-rescan", device})
+	cmd := exec.Command(exe[0], exe[1:]...) // #nosec G204
+	_, err := cmd.Output()
+	if err != nil {
+		return err
+	}
+	return nil
 }
