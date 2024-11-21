@@ -82,24 +82,24 @@ func NewNVMe(opts map[string]string) *NVMe {
 
 	paths := []string{"/sbin/nvme"}
 	for _, path := range paths {
-		path_copy := path
+		pathCopy := path
 		if nvme.getChrootDirectory() != "/" {
 			path = nvme.getChrootDirectory() + path
 		}
 
 		info, err := os.Stat(path)
-			if os.IsNotExist(err) {
-				log.Errorf("Error: Path %s does not exist\n", path)
-			} else if err != nil {
-				log.Errorf("Error: Unable to access path %s: %v\n", path, err)
-			} else if info.IsDir() {
-				log.Errorf("Error: Path %s is a directory, not an executable\n", path)
-			} else {
-				log.Infof("Success: Path %s exists and is an executable\n", path)
-				nvme.NVMeCommand = path_copy
-				log.Infof("nvme.NVMeCommand: %s", nvme.NVMeCommand)
-				break
-			}
+		if os.IsNotExist(err) {
+			log.Errorf("Error: Path %s does not exist\n", path)
+		} else if err != nil {
+			log.Errorf("Error: Unable to access path %s: %v\n", path, err)
+		} else if info.IsDir() {
+			log.Errorf("Error: Path %s is a directory, not an executable\n", path)
+		} else {
+			log.Infof("Success: Path %s exists and is an executable\n", path)
+			nvme.NVMeCommand = pathCopy
+			log.Infof("nvme.NVMeCommand: %s", nvme.NVMeCommand)
+			break
+		}
 	}
 
 	return &nvme
