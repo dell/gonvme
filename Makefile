@@ -19,7 +19,7 @@ all:check int-test
 
 unit-test:
 	go clean -cache
-	go test -v -coverprofile=c.out --run=TestMock
+	go test -v -coverprofile=c.out
 
 int-test:
 		 go test -v -timeout 20m -coverprofile=c.out -coverpkg ./...
