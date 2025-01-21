@@ -59,7 +59,7 @@ func TestTraceFuncCall(t *testing.T) {
 	}
 }
 
-func TestDefaultTracer(t *testing.T) {
+func TestDefaultTracer(_ *testing.T) {
 	tracer := &ConsoleTracer{}
 	// Trace is a one liner that calls fmt.Printf.
 	tracer.Trace(context.TODO(), "test message")

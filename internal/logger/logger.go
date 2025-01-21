@@ -25,7 +25,7 @@ import (
 var logger Logger
 
 func init() {
-	logger = &DummyLogger{}
+	logger = &ConsoleLogger{}
 }
 
 // SetLogger - set custom logger
@@ -40,21 +40,21 @@ type Logger interface {
 	Error(ctx context.Context, format string, args ...interface{})
 }
 
-// DummyLogger - placeholder for default logger
-type DummyLogger struct{}
+// ConsoleLogger - placeholder for default logger
+type ConsoleLogger struct{}
 
 // Info - log info using default logger
-func (dl *DummyLogger) Info(_ context.Context, format string, args ...interface{}) {
+func (dl *ConsoleLogger) Info(_ context.Context, format string, args ...interface{}) {
 	log.Print("INFO: " + fmt.Sprintf(format, args...))
 }
 
 // Debug - log debug using default logger
-func (dl *DummyLogger) Debug(_ context.Context, format string, args ...interface{}) {
+func (dl *ConsoleLogger) Debug(_ context.Context, format string, args ...interface{}) {
 	log.Print("DEBUG: " + fmt.Sprintf(format, args...))
 }
 
 // Error - log error using default logger
-func (dl *DummyLogger) Error(_ context.Context, format string, args ...interface{}) {
+func (dl *ConsoleLogger) Error(_ context.Context, format string, args ...interface{}) {
 	log.Print("ERROR: " + fmt.Sprintf(format, args...))
 }
 

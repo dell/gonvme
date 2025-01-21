@@ -21,12 +21,12 @@ import (
 	"testing"
 )
 
-func TestSetLogger(t *testing.T) {
+func TestSetLogger(_ *testing.T) {
 	oldLogger := logger
 	defer func() {
 		logger = oldLogger
 	}()
-	logger = &DummyLogger{}
+	logger = &ConsoleLogger{}
 	SetLogger(logger)
 }
 
@@ -54,7 +54,7 @@ func TestLogger(t *testing.T) {
 			defer func() {
 				logger = oldLogger
 			}()
-			logger = &DummyLogger{}
+			logger = &ConsoleLogger{}
 			tt.fn(context.Background(), "test")
 		})
 	}
