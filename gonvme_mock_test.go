@@ -40,7 +40,7 @@ func TestMockedDiscoverNVMeTCPTargets(t *testing.T) {
 		MockNumberOfTCPTargets: "2",
 	})
 	GONVMEMock.InduceDiscoveryError = false
-	targets, err := nvme.discoverNVMeTCPTargets("1.1.1.1", false)
+	targets, err := nvme.DiscoverNVMeTCPTargets("1.1.1.1", false)
 
 	if len(targets) != 2 {
 		t.Errorf("Expected 2 targets, got %d", len(targets))
@@ -51,12 +51,22 @@ func TestMockedDiscoverNVMeTCPTargets(t *testing.T) {
 	}
 }
 
+func TestMockedDiscoverNVMeTCPTargetsZero(t *testing.T) {
+	nvme := NewMockNVMe(map[string]string{
+		MockNumberOfTCPTargets: "0",
+	})
+	GONVMEMock.InduceDiscoveryError = false
+	targets, _ := nvme.DiscoverNVMeTCPTargets("1.1.1.1", false)
+
+	assert.Len(t, targets, 1)
+}
+
 func TestMockedDiscoverNVMeTCPTargetsError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{
 		MockNumberOfTCPTargets: "2",
 	})
 	GONVMEMock.InduceDiscoveryError = true
-	_, err := nvme.discoverNVMeTCPTargets("1.1.1.1", false)
+	_, err := nvme.DiscoverNVMeTCPTargets("1.1.1.1", false)
 	assert.NotNil(t, err)
 }
 
@@ -66,7 +76,7 @@ func TestMockedDiscoverNVMeFCTargets(t *testing.T) {
 	})
 	GONVMEMock.InduceDiscoveryError = false
 
-	targets, err := nvme.discoverNVMeFCTargets("nn-0x11aaa11111111a11:pn-0x11aaa11111111a11", false)
+	targets, err := nvme.DiscoverNVMeFCTargets("nn-0x11aaa11111111a11:pn-0x11aaa11111111a11", false)
 
 	if len(targets) != 2 {
 		t.Errorf("Expected 2 targets, got %d", len(targets))
@@ -77,12 +87,21 @@ func TestMockedDiscoverNVMeFCTargets(t *testing.T) {
 	}
 }
 
+func TestMockedDiscoverNVMeFCTargetsZero(t *testing.T) {
+	nvme := NewMockNVMe(map[string]string{
+		MockNumberOfFCTargets: "0",
+	})
+	GONVMEMock.InduceDiscoveryError = false
+	targets, _ := nvme.DiscoverNVMeFCTargets("nn-0x11aaa11111111a11:pn-0x11aaa11111111a11", false)
+	assert.Len(t, targets, 1)
+}
+
 func TestMockedDiscoverNVMeFCTargetsError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{
 		MockNumberOfFCTargets: "2",
 	})
 	GONVMEMock.InduceDiscoveryError = true
-	_, err := nvme.discoverNVMeFCTargets("nn-0x11aaa11111111a11:pn-0x11aaa11111111a11", false)
+	_, err := nvme.DiscoverNVMeFCTargets("nn-0x11aaa11111111a11:pn-0x11aaa11111111a11", false)
 	assert.NotNil(t, err)
 }
 
@@ -90,7 +109,7 @@ func TestMockedGetInitiators(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{
 		MockNumberOfInitiators: "2",
 	})
-	initiators, err := nvme.getInitiators("")
+	initiators, err := nvme.GetInitiators("")
 	assert.Nil(t, err)
 	assert.Len(t, initiators, 2)
 }
@@ -99,7 +118,7 @@ func TestMockedGetInitiatorsZero(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{
 		MockNumberOfInitiators: "0",
 	})
-	initiators, err := nvme.getInitiators("")
+	initiators, err := nvme.GetInitiators("")
 	assert.Nil(t, err)
 	assert.Len(t, initiators, 1)
 }
@@ -109,46 +128,46 @@ func TestMockedGetInitiatorsError(t *testing.T) {
 		MockNumberOfInitiators: "2",
 	})
 	GONVMEMock.InduceInitiatorError = true
-	_, err := nvme.getInitiators("")
+	_, err := nvme.GetInitiators("")
 	assert.NotNil(t, err)
 }
 
-func TestMockedNvmeTCPConnect(t *testing.T) {
+func TestMockedNVMeTCPConnect(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
-	err := nvme.nvmeTCPConnect(NVMeTarget{}, false)
+	err := nvme.NVMeTCPConnect(NVMeTarget{}, false)
 	assert.Nil(t, err)
 }
 
-func TestMockedNvmeTCPConnectError(t *testing.T) {
+func TestMockedNVMeTCPConnectError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
 	GONVMEMock.InduceTCPLoginError = true
-	err := nvme.nvmeTCPConnect(NVMeTarget{}, false)
+	err := nvme.NVMeTCPConnect(NVMeTarget{}, false)
 	assert.NotNil(t, err)
 }
 
-func TestMockedNvmeFCConnect(t *testing.T) {
+func TestMockedNVMeFCConnect(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
-	err := nvme.nvmeFCConnect(NVMeTarget{}, false)
+	err := nvme.NVMeFCConnect(NVMeTarget{}, false)
 	assert.Nil(t, err)
 }
 
-func TestMockedNvmeFCConnectError(t *testing.T) {
+func TestMockedNVMeFCConnectError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
 	GONVMEMock.InduceFCLoginError = true
-	err := nvme.nvmeFCConnect(NVMeTarget{}, false)
+	err := nvme.NVMeFCConnect(NVMeTarget{}, false)
 	assert.NotNil(t, err)
 }
 
-func TestMockedNvmeDisconnect(t *testing.T) {
+func TestMockedNVMeDisconnect(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
-	err := nvme.nvmeDisconnect(NVMeTarget{})
+	err := nvme.NVMeDisconnect(NVMeTarget{})
 	assert.Nil(t, err)
 }
 
-func TestMockedNvmeDisconnectError(t *testing.T) {
+func TestMockedNVMeDisconnectError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
 	GONVMEMock.InduceLogoutError = true
-	err := nvme.nvmeDisconnect(NVMeTarget{})
+	err := nvme.NVMeDisconnect(NVMeTarget{})
 	assert.NotNil(t, err)
 }
 
@@ -201,5 +220,19 @@ func TestMockedGetSessionsError(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
 	GONVMEMock.InduceGetSessionsError = true
 	_, err := nvme.GetSessions()
+	assert.NotNil(t, err)
+}
+
+func TestMockedDeviceRescan(t *testing.T) {
+	nvme := NewMockNVMe(map[string]string{})
+	GONVMEMock.InduceGetSessionsError = false
+	err := nvme.DeviceRescan("")
+	assert.Nil(t, err)
+}
+
+func TestMockedDeviceRescanError(t *testing.T) {
+	nvme := NewMockNVMe(map[string]string{})
+	GONVMEMock.InduceGetSessionsError = true
+	err := nvme.DeviceRescan("")
 	assert.NotNil(t, err)
 }
