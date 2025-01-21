@@ -1,6 +1,5 @@
 /*
- *
- * Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2024-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,4 +57,10 @@ func TestTraceFuncCall(t *testing.T) {
 	if buf.String() != expected {
 		t.Errorf("expected %q, got %q", expected, buf.String())
 	}
+}
+
+func TestDefaultTracer(t *testing.T) {
+	tracer := &ConsoleTracer{}
+	// Trace is a one liner that calls fmt.Printf.
+	tracer.Trace(context.TODO(), "test message")
 }

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ func SetTracer(customTracer Tracer) {
 }
 
 func init() {
-	tracer = &DummyTracer{}
+	tracer = &ConsoleTracer{}
 }
 
 // TraceFuncCall - trace definitions
@@ -45,11 +45,11 @@ func TraceFuncCall(ctx context.Context, funcName string) func() {
 	}
 }
 
-// DummyTracer - default tracer
-type DummyTracer struct{}
+// ConsoleTracer - default tracer
+type ConsoleTracer struct{}
 
 // Trace - default trace
-func (dl *DummyTracer) Trace(_ context.Context, format string, args ...interface{}) {
+func (dl *ConsoleTracer) Trace(_ context.Context, format string, args ...interface{}) {
 	fmt.Printf(format+"\n", args...)
 }
 
