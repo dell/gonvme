@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2024-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,15 @@ import (
 	"context"
 	"testing"
 )
+
+func TestSetLogger(_ *testing.T) {
+	oldLogger := logger
+	defer func() {
+		logger = oldLogger
+	}()
+	logger = &ConsoleLogger{}
+	SetLogger(logger)
+}
 
 func TestLogger(t *testing.T) {
 	tests := []struct {
@@ -45,7 +54,7 @@ func TestLogger(t *testing.T) {
 			defer func() {
 				logger = oldLogger
 			}()
-			logger = &DummyLogger{}
+			logger = &ConsoleLogger{}
 			tt.fn(context.Background(), "test")
 		})
 	}

@@ -661,6 +661,21 @@ func TestNVMeTCPConnect(t *testing.T) {
 			false,
 		},
 		{
+			"successfully connects duplicate",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
+			},
+			true,
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  nil,
+				}
+			},
+			false,
+		},
+		{
 			"error connecting",
 			NVMeTarget{
 				Portal:    "1.1.1.1",
@@ -722,6 +737,21 @@ func TestNVMeFCConnect(t *testing.T) {
 				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
 			},
 			false,
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					startErr: nil,
+					waitErr:  nil,
+				}
+			},
+			false,
+		},
+		{
+			"successfully connects duplicate",
+			NVMeTarget{
+				Portal:    "1.1.1.1",
+				TargetNqn: "nqn.1988-11.com.mock:00:a1a1a1a111a1111A111A",
+			},
+			true,
 			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
@@ -866,4 +896,9 @@ func TestDeviceRescan(t *testing.T) {
 			assert.NoError(t, err)
 		}
 	}
+}
+
+func TestIsNoObjsExitCode(t *testing.T) {
+	r := isNoObjsExitCode(nil)
+	assert.False(t, r)
 }
