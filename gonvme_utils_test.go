@@ -79,6 +79,60 @@ func TestSessionParser(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Skip invalid transport",
+			input: `{
+                "HostNQN": "something",
+                "HostID": "something",
+                "Subsystems": [{
+                    "NQN": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                    "Paths": [{
+                        "Name": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                        "Transport": "fc",
+                        "Address": "traddr=10.0.0.1:4420 trsvcid=4420 src=00",
+                        "State": "live"
+                    },
+					{
+                        "Name": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                        "Transport": "invalid",
+                        "Address": "traddr=10.0.0.1:4420 trsvcid=4420 src=00",
+                        "State": "live"
+                    }]
+                }]
+            }`,
+			expectedResult: []NVMESession{
+				{
+					Name:              "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+					Target:            "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+					NVMETransportName: "fc",
+					Portal:            "10.0.0.1:4420",
+					NVMESessionState:  "live",
+				},
+			},
+		},
+		{
+			name: "Fail to parse",
+			input: `{
+                "HostNQN": 1,
+                "HostID": "something",
+                "Subsystems": [{
+                    "NQN": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                    "Paths": [{
+                        "Name": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                        "Transport": "fc",
+                        "Address": "traddr=10.0.0.1:4420 trsvcid=4420 src=00",
+                        "State": "live"
+                    },
+					{
+                        "Name": "nqn.2014-08.com.dell:shared-storage:fc:1234567890abcdef",
+                        "Transport": "invalid",
+                        "Address": "traddr=10.0.0.1:4420 trsvcid=4420 src=00",
+                        "State": "live"
+                    }]
+                }]
+            }`,
+			expectedResult: []NVMESession(nil),
+		},
 	}
 
 	sp := &sessionParser{}

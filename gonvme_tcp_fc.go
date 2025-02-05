@@ -63,6 +63,10 @@ var getCommand = func(name string, arg ...string) command {
 	return exec.Command(name, arg...)
 }
 
+var getPaths = func() []string {
+	return []string{"/sbin/nvme"}
+}
+
 // NVMe provides many nvme-specific functions
 type NVMe struct {
 	NVMeType
@@ -80,7 +84,7 @@ func NewNVMe(opts map[string]string) *NVMe {
 	}
 	nvme.sessionParser = &sessionParser{}
 
-	paths := []string{"/sbin/nvme"}
+	paths := getPaths()
 	for _, path := range paths {
 		pathCopy := path
 		if nvme.getChrootDirectory() != "/" {
