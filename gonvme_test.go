@@ -51,10 +51,10 @@ func TestNVMeType_getOptions(t *testing.T) {
 	assert.Equal(t, options, nvme.getOptions())
 }
 
-func TestSetLogger(t *testing.T) {
+func TestSetLogger(_ *testing.T) {
 	SetLogger(&logger.ConsoleLogger{})
 }
 
-func TestSetTracer(t *testing.T) {
+func TestSetTracer(_ *testing.T) {
 	SetTracer(&tracer.ConsoleTracer{})
 }
