@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dell/gonvme/internal/logger"
+	"github.com/dell/gonvme/internal/tracer"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -47,4 +49,12 @@ func TestNVMeType_getOptions(t *testing.T) {
 	options := map[string]string{"key": "value"}
 	nvme := &NVMeType{options: options}
 	assert.Equal(t, options, nvme.getOptions())
+}
+
+func TestSetLogger(_ *testing.T) {
+	SetLogger(&logger.ConsoleLogger{})
+}
+
+func TestSetTracer(_ *testing.T) {
+	SetTracer(&tracer.ConsoleTracer{})
 }

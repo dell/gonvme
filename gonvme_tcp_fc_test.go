@@ -69,6 +69,38 @@ func TestNewNVMe(t *testing.T) {
 	nvme.sessionParser = &sessionParser{}
 
 	assert.NotNil(t, nvme)
+
+	originalGetPaths := getPaths
+	defer func() {
+		getPaths = originalGetPaths
+	}()
+
+	// this path is used for hostnqn but can serve as the nvme command for testing
+	getPaths = func() []string {
+		return []string{"testdata/hostnqn"}
+	}
+
+	nvme = NewNVMe(nil)
+	assert.NotNil(t, nvme)
+}
+
+func TestNewNVMeBadPaths(t *testing.T) {
+	originalGetPaths := getPaths
+	defer func() {
+		getPaths = originalGetPaths
+	}()
+
+	getPaths = func() []string {
+		return []string{"/bad/path/does/not/exist"}
+	}
+	nvme := NewNVMe(nil)
+	assert.NotNil(t, nvme)
+
+	getPaths = func() []string {
+		return []string{"testdata/fc_host"}
+	}
+	nvme = NewNVMe(nil)
+	assert.NotNil(t, nvme)
 }
 
 func TestGetChrootDirectory(t *testing.T) {
