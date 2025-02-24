@@ -676,6 +676,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 		duplicateConnect bool
 		getCommandFn     func(_ string, _ ...string) command
 		wantErr          bool
+		errContains      string
 	}{
 		{
 			"successfully connects",
@@ -691,6 +692,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 				}
 			},
 			false,
+			"",
 		},
 		{
 			"successfully connects duplicate",
@@ -706,6 +708,7 @@ func TestNVMeTCPConnect(t *testing.T) {
 				}
 			},
 			false,
+			"",
 		},
 		{
 			"error connecting",
@@ -717,10 +720,11 @@ func TestNVMeTCPConnect(t *testing.T) {
 			func(_ string, _ ...string) command {
 				return &mockCommand{
 					startErr: nil,
-					waitErr:  errors.New("error"),
+					waitErr:  errors.New("error should be in output"),
 				}
 			},
 			true,
+			"error should be in output",
 		},
 		{
 			"error connecting with code 114",
@@ -736,21 +740,25 @@ func TestNVMeTCPConnect(t *testing.T) {
 				}
 			},
 			true,
+			"error connecting to nvme target",
 		},
 	}
 
 	for _, tc := range tests {
-		originalGetCommand := getCommand
-		getCommand = tc.getCommandFn
-		defer func() { getCommand = originalGetCommand }()
+		t.Run(tc.name, func(t *testing.T) {
+			originalGetCommand := getCommand
+			getCommand = tc.getCommandFn
+			defer func() { getCommand = originalGetCommand }()
 
-		c := NewNVMe(map[string]string{})
-		err := c.NVMeTCPConnect(tc.nvmeTarget, tc.duplicateConnect)
-		if tc.wantErr {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-		}
+			c := NewNVMe(map[string]string{})
+			err := c.NVMeTCPConnect(tc.nvmeTarget, tc.duplicateConnect)
+			if tc.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errContains)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 
