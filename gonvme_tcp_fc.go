@@ -523,9 +523,8 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			// nvme connect exited with an exit code != 0
 			nvmeConnectResult := -1
-			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				nvmeConnectResult = status.ExitStatus()
-			}
+			nvmeConnectResult = exiterr.ExitCode()
+
 			if nvmeConnectResult == 114 || nvmeConnectResult == 70 {
 				// session already exists
 				// do not treat this as a failure
@@ -534,8 +533,9 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 					log.Infof("NVMe connection already exists\n")
 					err = nil
 				} else {
-					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
-					return err
+					msg := fmt.Sprintf("error connecting to nvme target %s at %s: %v: %s", target.TargetNqn, target.Portal, err, Output)
+					log.Errorf("\n%s", msg)
+					return fmt.Errorf("%s", msg)
 				}
 			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
 				// session already exists
@@ -550,8 +550,9 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 		}
 
 		if err != nil {
-			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
-			return err
+			msg := fmt.Sprintf("error connecting to nvme target %s at %s: %v: %s", target.TargetNqn, target.Portal, err, Output)
+			log.Errorf("\n%s", msg)
+			return fmt.Errorf("%s", msg)
 		}
 	} else {
 		log.Infof("\nnvme connect successful: %s", target.TargetNqn)
