@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 
@@ -36,9 +37,6 @@ const (
 
 	// NVMePort - port number
 	NVMePort = "4420"
-
-	// NVMEAlreadyConnected contains output holder for nvme connect
-	NVMEAlreadyConnected = "already connected"
 
 	// NVMeNoObjsFoundExitCode exit code indicates that no records/targets/sessions/portals
 	// found to execute operation on
@@ -519,6 +517,9 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	log.Debugf("connect output: %s", Output)
 	err = cmd.Wait()
 
+	// NVMEAlreadyConnected contains output holder for nvme connect
+	// TODO previous version of nvme lib contained a typo (connnected)
+	NVMEAlreadyConnected := regexp.MustCompile(`already con+nected`)
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			// nvme connect exited with an exit code != 0
@@ -537,7 +538,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 					log.Errorf("\n%s", msg)
 					return fmt.Errorf("%s", msg)
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
+			} else if nvmeConnectResult == 1 && NVMEAlreadyConnected.MatchString(Output) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
@@ -591,6 +592,9 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 	}
 	err = cmd.Wait()
 
+	// NVMEAlreadyConnected contains output holder for nvme connect
+	// TODO previous version of nvme lib contained a typo (connnected)
+	NVMEAlreadyConnected := regexp.MustCompile(`already con+nected`)
 	if err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			// nvme connect exited with an exit code != 0
@@ -609,7 +613,7 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
 					return err
 				}
-			} else if nvmeConnectResult == 1 && strings.Contains(Output, NVMEAlreadyConnected) {
+			} else if nvmeConnectResult == 1 && NVMEAlreadyConnected.MatchString(Output) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
 				log.Infof("NVMe connection already exists\n")
