@@ -261,7 +261,6 @@ func TestGetInitiators(t *testing.T) {
 // There are two known formats for the output of the nvme list -o json command.
 // Newer versions of nvme, around 2.11 (RHEL 9.6) introduced a version which is
 // incompatable with the older versions.
-//
 func TestListNVMeDeviceAndNamespace(t *testing.T) {
 	tests := []struct {
 		name         string

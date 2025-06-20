@@ -699,7 +699,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 
 						if hasNs && hasNsid {
 							devicePath := ns
-							if ! strings.HasPrefix(ns, "/dev/") {
+							if !strings.HasPrefix(ns, "/dev/") {
 								devicePath = "/dev/" + ns
 							}
 							pathAndNameSpace := DevicePathAndNamespace{
@@ -711,8 +711,6 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 					}
 				}
 			}
-
-			continue
 		} else {
 			// Releases prior to nvme-cli 2.11 use NameSpace and DevicePath.
 			device := unknownDevice.(map[string]interface{})
