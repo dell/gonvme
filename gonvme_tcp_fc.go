@@ -703,7 +703,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 								devicePath = "/dev/" + ns
 							}
 							pathAndNameSpace := DevicePathAndNamespace{
-								Namespace:  strconv.FormatFloat(float64(nsid), 'f', -1, 64),
+								Namespace:  strconv.FormatFloat(nsid, 'f', -1, 64),
 								DevicePath: devicePath,
 							}
 							result = append(result, pathAndNameSpace)
@@ -721,7 +721,7 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 
 			if hasNameSpace && hasDevice {
 				pathAndNameSpace := DevicePathAndNamespace{
-					Namespace:  strconv.FormatFloat(float64(nameSpace), 'f', -1, 64),
+					Namespace:  strconv.FormatFloat(nameSpace, 'f', -1, 64),
 					DevicePath: devicePath,
 				}
 				result = append(result, pathAndNameSpace)
