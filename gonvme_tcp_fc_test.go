@@ -258,6 +258,10 @@ func TestGetInitiators(t *testing.T) {
 	}
 }
 
+// There are two known formats for the output of the nvme list -o json command.
+// Newer versions of nvme, around 2.11 (RHEL 9.6) introduced a version which is
+// incompatable with the older versions.
+//
 func TestListNVMeDeviceAndNamespace(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -266,7 +270,7 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			"successfully lists devices",
+			"nvme-cli pre 2_11 format",
 			func(_ string, _ ...string) command {
 				return &mockCommand{
 					out: []byte(`{
@@ -312,7 +316,84 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 			false,
 		},
 		{
-			"erorr listing devices",
+			"nvme-cli 2_11 format",
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					out: []byte(`{
+						"Devices":[
+							{
+							"HostNQN":"nqn.2014-08.org.nvmexpress:uuid:a66f1c42-4bce-a619-9c59-9ae6ac2ccb8a",
+							"HostID":"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+							"Subsystems":[
+								{
+								"Subsystem":"nvme-subsys0",
+								"SubsystemNQN":"nqn.1988-11.com.dell:powerstore:00:42c92aa830b1FF113003",
+								"Controllers":[
+									{
+									"Controller":"nvme0",
+									"Cntlid":"4102",
+									"SerialNumber":"883YCJ3",
+									"ModelNumber":"dellemc-powerstore",
+									"Firmware":"4.1.0.0",
+									"Transport":"tcp",
+									"Address":"traddr=10.11.12.13,trsvcid=4420,src_addr=10.10.10.21",
+									"Slot":"",
+									"Namespaces":[
+									],
+									"Paths":[
+										{
+										"Path":"nvme0c0n1",
+										"ANAState":"optimized"
+										}
+									]
+									},
+									{
+									"Controller":"nvme1",
+									"Cntlid":"8",
+									"SerialNumber":"883YCJ3",
+									"ModelNumber":"dellemc-powerstore",
+									"Firmware":"4.1.0.0",
+									"Transport":"tcp",
+									"Address":"traddr=10.11.12.14,trsvcid=4420,src_addr=10.10.10.21",
+									"Slot":"",
+									"Namespaces":[
+									],
+									"Paths":[
+										{
+										"Path":"nvme0c1n1",
+										"ANAState":"non-optimized"
+										}
+									]
+									}
+								],
+								"Namespaces":[
+									{
+									"NameSpace":"nvme0n1",
+									"Generic":"ng0n1",
+									"NSID":293,
+									"UsedBytes":620130304,
+									"MaximumLBA":6291456,
+									"PhysicalSize":3221225472,
+									"SectorSize":512
+									}
+								]
+								}
+							]
+							}
+						]
+					}`),
+				}
+			},
+			[]DevicePathAndNamespace{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "293",
+				},
+			},
+			false,
+		},
+		{
+			"error listing devices",
 			func(_ string, _ ...string) command {
 				return &mockCommand{
 					outErr: errors.New("error listing devices"),
@@ -320,6 +401,36 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 			},
 			nil,
 			true,
+		},
+		{
+			"error on unmarshalling json",
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					out: []byte(`{
+						"Devices" : [
+						  {
+						]
+					  }`),
+				}
+			},
+			nil,
+			true,
+		},
+		{
+			"unknown data format",
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					out: []byte(`{
+						"Devices" : [
+						  {
+							"ValidButNotWhatWeExpect" : "value"
+						  }
+						]
+					}`),
+				}
+			},
+			nil,
+			false,
 		},
 	}
 

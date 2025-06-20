@@ -1,6 +1,4 @@
-#
-#
-# Copyright © 2022 Dell Inc. or its subsidiaries. All Rights Reserved.
+# Copyright © 2022-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +12,16 @@
 #
 #
 
+all: unit-test
 
-all:check int-test
+clean:
+	go clean -cache
 
 unit-test:
-	go clean -cache
-	go test -v -coverprofile=c.out
+	go test -v -count 1 -coverprofile=c.out
 
 int-test:
-		 go test -v -timeout 20m -coverprofile=c.out -coverpkg ./...
+	go test -v -timeout 20m -coverprofile=c.out -coverpkg ./...
 
 gocover:
 	go tool cover -html=c.out
