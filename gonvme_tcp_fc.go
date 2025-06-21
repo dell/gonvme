@@ -723,11 +723,8 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 					DevicePath: devicePath,
 				}
 				result = append(result, pathAndNameSpace)
-				continue
 			}
 		}
-
-		log.Errorf("Device has an unrecognized format which we cannot handle: %v", unknownDevice)
 	}
 
 	return result, nil
