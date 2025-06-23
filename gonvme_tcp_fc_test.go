@@ -392,6 +392,65 @@ func TestListNVMeDeviceAndNamespace(t *testing.T) {
 			false,
 		},
 		{
+			"powermax devices",
+			func(_ string, _ ...string) command {
+				return &mockCommand{
+					out: []byte(`{
+						"Devices":[
+							{
+							"HostNQN":"nqn.2014-08.org.nvmexpress:uuid:6e791c42-7031-30e2-3342-732f51ca58ec",
+							"HostID":"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+							"Subsystems":[
+								{
+								"Subsystem":"nvme-subsys0",
+								"SubsystemNQN":"nqn.1988-11.com.dell:PowerMax_2500:00:000120001647",
+								"Controllers":[
+									{
+									"Controller":"nvme0",
+									"Cntlid":"17453",
+									"SerialNumber":"00000120001647",
+									"ModelNumber":"EMC PowerMax_2500",
+									"Firmware":"60790275",
+									"Transport":"tcp",
+									"Address":"traddr=10.11.12.13,trsvcid=4420,src_addr=10.10.10.21",
+									"Slot":"",
+									"Namespaces":[
+									],
+									"Paths":[
+										{
+										"Path":"nvme0c0n1",
+										"ANAState":"optimized"
+										}
+									]
+									}
+								],
+								"Namespaces":[
+									{
+									"NameSpace":"nvme0n1",
+									"Generic":"ng0n1",
+									"NSID":1874,
+									"UsedBytes":0,
+									"MaximumLBA":6293760,
+									"PhysicalSize":3222405120,
+									"SectorSize":512
+									}
+								]
+								}
+							]
+							}
+						]
+					  }`),
+				}
+			},
+			[]DevicePathAndNamespace{
+				{
+					DevicePath: "/dev/nvme0n1",
+					Namespace:  "1874",
+				},
+			},
+			false,
+		},
+		{
 			"error listing devices",
 			func(_ string, _ ...string) command {
 				return &mockCommand{
