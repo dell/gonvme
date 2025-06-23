@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022-2024 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package gonvme
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -658,46 +660,9 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	return err
 }
 
-// ListNVMeDeviceAndNamespace returns the NVME Device Paths and Namespace of each of the NVME device
+// ListNVMeDeviceAndNamespace returns the NVMe device paths and namespace of each of the NVMe device.
 func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error) {
-	/* ListNVMeDeviceAndNamespace Output
-	{/dev/nvme0n1 54}
-	{/dev/nvme0n2 55}
-	{/dev/nvme1n1 54}
-	{/dev/nvme1n2 55}
-	*/
 	exe := nvme.buildNVMeCommand([]string{"nvme", "list", "-o", "json"})
-
-	/* nvme list -o json
-	{
-	  "Devices" : [
-	    {
-	      "NameSpace" : 9217,
-	      "DevicePath" : "/dev/nvme0n1",
-	      "Firmware" : "2.1.0.0",
-	      "Index" : 0,
-	      "ModelNumber" : "dellemc",
-	      "SerialNumber" : "FP08RZ2",
-	      "UsedBytes" : 0,
-	      "MaximumLBA" : 10485760,
-	      "PhysicalSize" : 5368709120,
-	      "SectorSize" : 512
-	    },
-	    {
-	      "NameSpace" : 9222,
-	      "DevicePath" : "/dev/nvme0n2",
-	      "Firmware" : "2.1.0.0",
-	      "Index" : 0,
-	      "ModelNumber" : "dellemc",
-	      "SerialNumber" : "FP08RZ2",
-	      "UsedBytes" : 0,
-	      "MaximumLBA" : 10485760,
-	      "PhysicalSize" : 5368709120,
-	      "SectorSize" : 512
-	    }
-	  ]
-	}
-	*/
 	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
 
 	output, err := cmd.Output()
@@ -705,41 +670,101 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 		return []DevicePathAndNamespace{}, err
 	}
 
-	str := string(output)
-	lines := strings.Split(str, "\n")
+	type NvmeResult struct {
+		Devices []interface{}
+	}
+
+	var nvmeResult NvmeResult
+	err = json.Unmarshal(output, &nvmeResult)
+	if err != nil {
+		log.Errorf("Could not unmarshal nvme list output: %v\nnvme list output: '%s'", err, output)
+		return []DevicePathAndNamespace{}, err
+	}
 
 	var result []DevicePathAndNamespace
-	var currentPathAndNamespace *DevicePathAndNamespace
-	var devicePath string
-	var namespace string
+	for _, unknownDevice := range nvmeResult.Devices {
+		// This format appears in nvme-cli 2.11. In this format the Namespace
+		// field has the device ID and the NSID is the namespace ID.
+		// See the UT for the different formats.
+		//
+		//
+		// {
+		// 	"Devices":[
+		// 		{
+		// 		"HostNQN":"nqn.2014-08.org.nvmexpress:uuid:a66f1c42-4bce-a619-9c59-9ae6ac2ccb8a",
+		// 		"HostID":"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+		// 		"Subsystems":[
+		//          ...
+		// 			"Namespaces":[
+		// 				{
+		// 				"NameSpace":"nvme0n1",
+		// 				"Generic":"ng0n1",
+		// 				"NSID":293,
+		// 				"UsedBytes":620130304,
+		// 				"MaximumLBA":6291456,
+		// 				"PhysicalSize":3221225472,
+		// 				"SectorSize":512
+		// 				}
+		// 			]
+		// 			}
+		// 		]
+		// 		}
+		// 	]
+		// }
+		subsystems, hasSubsystems := unknownDevice.(map[string]interface{})["Subsystems"].([]interface{})
+		if hasSubsystems {
+			for _, subsystem := range subsystems {
+				subsystem := subsystem.(map[string]interface{})
+				namespaces, hasNamespaces := subsystem["Namespaces"].([]interface{})
+				if hasNamespaces {
+					for _, namespace := range namespaces {
+						namespace := namespace.(map[string]interface{})
+						ns, hasNs := namespace["NameSpace"].(string)
+						nsid, hasNsid := namespace["NSID"].(float64)
 
-	for _, line := range lines {
-
-		line = strings.ReplaceAll(strings.TrimSpace(line), ",", "")
-
-		switch {
-		case strings.HasPrefix(line, "\"NameSpace\""):
-			if len(strings.Split(line, ":")) >= 2 {
-				namespace = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
-			}
-
-		case strings.HasPrefix(line, "\"DevicePath\""):
-			if len(strings.Split(line, ":")) >= 2 {
-				devicePath = strings.ReplaceAll(strings.TrimSpace(strings.Split(line, ":")[1]), "\"", "")
-
-				PathAndNamespace := DevicePathAndNamespace{}
-				PathAndNamespace.Namespace = namespace
-				PathAndNamespace.DevicePath = devicePath
-
-				if currentPathAndNamespace != nil {
-					result = append(result, *currentPathAndNamespace)
+						if hasNs && hasNsid {
+							devicePath := ns
+							if !strings.HasPrefix(ns, "/dev/") {
+								devicePath = "/dev/" + ns
+							}
+							pathAndNameSpace := DevicePathAndNamespace{
+								Namespace:  strconv.FormatFloat(nsid, 'f', -1, 64),
+								DevicePath: devicePath,
+							}
+							result = append(result, pathAndNameSpace)
+						}
+					}
 				}
-				currentPathAndNamespace = &PathAndNamespace
+			}
+		} else {
+			// Releases prior to nvme-cli 2.11 use NameSpace and DevicePath.
+			// {
+			// 	"Devices" : [
+			// 	  {
+			// 		"NameSpace" : 9217,
+			// 		"DevicePath" : "/dev/nvme0n1",
+			// 		"Firmware" : "2.1.0.0",
+			// 		"Index" : 0,
+			// 		"ModelNumber" : "dellemc",
+			// 		"SerialNumber" : "FP08RZ2",
+			// 		"UsedBytes" : 0,
+			// 		"MaximumLBA" : 10485760,
+			// 		"PhysicalSize" : 5368709120,
+			// 		"SectorSize" : 512
+			// 	  }
+			//  ]
+			device := unknownDevice.(map[string]interface{})
+			nameSpace, hasNameSpace := device["NameSpace"].(float64)
+			devicePath, hasDevice := device["DevicePath"].(string)
+
+			if hasNameSpace && hasDevice {
+				pathAndNameSpace := DevicePathAndNamespace{
+					Namespace:  strconv.FormatFloat(nameSpace, 'f', -1, 64),
+					DevicePath: devicePath,
+				}
+				result = append(result, pathAndNameSpace)
 			}
 		}
-	}
-	if currentPathAndNamespace != nil {
-		result = append(result, *currentPathAndNamespace)
 	}
 
 	return result, nil
