@@ -686,6 +686,31 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 		// This format appears in nvme-cli 2.11. In this format the Namespace
 		// field has the device ID and the NSID is the namespace ID.
 		// See the UT for the different formats.
+		//
+		//
+		// {
+		// 	"Devices":[
+		// 		{
+		// 		"HostNQN":"nqn.2014-08.org.nvmexpress:uuid:a66f1c42-4bce-a619-9c59-9ae6ac2ccb8a",
+		// 		"HostID":"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+		// 		"Subsystems":[
+		//          ...
+		// 			"Namespaces":[
+		// 				{
+		// 				"NameSpace":"nvme0n1",
+		// 				"Generic":"ng0n1",
+		// 				"NSID":293,
+		// 				"UsedBytes":620130304,
+		// 				"MaximumLBA":6291456,
+		// 				"PhysicalSize":3221225472,
+		// 				"SectorSize":512
+		// 				}
+		// 			]
+		// 			}
+		// 		]
+		// 		}
+		// 	]
+		// }
 		subsystems, hasSubsystems := unknownDevice.(map[string]interface{})["Subsystems"].([]interface{})
 		if hasSubsystems {
 			for _, subsystem := range subsystems {
@@ -713,6 +738,21 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 			}
 		} else {
 			// Releases prior to nvme-cli 2.11 use NameSpace and DevicePath.
+			// {
+			// 	"Devices" : [
+			// 	  {
+			// 		"NameSpace" : 9217,
+			// 		"DevicePath" : "/dev/nvme0n1",
+			// 		"Firmware" : "2.1.0.0",
+			// 		"Index" : 0,
+			// 		"ModelNumber" : "dellemc",
+			// 		"SerialNumber" : "FP08RZ2",
+			// 		"UsedBytes" : 0,
+			// 		"MaximumLBA" : 10485760,
+			// 		"PhysicalSize" : 5368709120,
+			// 		"SectorSize" : 512
+			// 	  }
+			//  ]
 			device := unknownDevice.(map[string]interface{})
 			nameSpace, hasNameSpace := device["NameSpace"].(float64)
 			devicePath, hasDevice := device["DevicePath"].(string)
