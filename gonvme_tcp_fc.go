@@ -64,7 +64,7 @@ var getCommand = func(name string, arg ...string) command {
 }
 
 var getPaths = func() []string {
-	return []string{"/sbin/nvme"}
+	return []string{"/sbin/nvme", "/usr/sbin/nvme"}
 }
 
 // NVMe provides many nvme-specific functions

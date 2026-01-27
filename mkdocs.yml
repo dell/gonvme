@@ -1,0 +1,7 @@
+site_name: 'gonvme'
+site_description: 'gonvme Documentation.'
+docs_dir: docs
+plugins:
+  - techdocs-core
+theme:
+  name: material
