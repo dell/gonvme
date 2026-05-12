@@ -258,6 +258,72 @@ func TestGetInitiators(t *testing.T) {
 	}
 }
 
+func TestGetHostID(t *testing.T) {
+	tests := []struct {
+		name         string
+		want         string
+		wantErr      bool
+		createFile   bool
+		fileContents string
+	}{
+		{
+			"successfully gets host ID",
+			"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+			false,
+			true,
+			"a2d57d74-a198-4e6b-aa78-97af9cd00f31",
+		},
+		{
+			"error file doesn't exist",
+			"",
+			true,
+			false,
+			"",
+		},
+		{
+			"error empty file",
+			"",
+			true,
+			true,
+			"",
+		},
+	}
+
+	for _, tc := range tests {
+		chrootDir := t.TempDir()
+		hostidPath := chrootDir + "/etc/nvme/hostid"
+		err := os.MkdirAll(chrootDir+"/etc/nvme", 0o755)
+		assert.NoError(t, err)
+
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup test file if needed
+			if tc.createFile {
+				if tc.fileContents != "" {
+					err := os.WriteFile(hostidPath, []byte(tc.fileContents), 0o644)
+					assert.NoError(t, err)
+				} else {
+					// Create empty file
+					_, err := os.Create(hostidPath)
+					assert.NoError(t, err)
+				}
+			}
+			opts := map[string]string{
+				"chrootDirectory": chrootDir,
+			}
+			nvme := NewNVMe(opts)
+			nvme.sessionParser = &sessionParser{}
+
+			got, err := nvme.GetHostID()
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
 // There are two known formats for the output of the nvme list -o json command.
 // Newer versions of nvme, around 2.11 (RHEL 9.6) introduced a version which is
 // incompatable with the older versions.

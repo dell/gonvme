@@ -45,6 +45,9 @@ type NVMEinterface interface {
 	// To use the system default file of "/etc/nvme/hostnqn", provide a filename of ""
 	GetInitiators(filename string) ([]string, error)
 
+	// GetHostID get the NVMe host ID from the system default file "/etc/nvme/hostid"
+	GetHostID() (string, error)
+
 	// NVMeTCPConnect connects into a specified NVMeTCP target
 	NVMeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 

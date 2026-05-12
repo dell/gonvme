@@ -132,6 +132,21 @@ func TestMockedGetInitiatorsError(t *testing.T) {
 	assert.NotNil(t, err)
 }
 
+func TestMockedGetHostID(t *testing.T) {
+	GONVMEMock.InduceInitiatorError = false
+	nvme := NewMockNVMe(map[string]string{})
+	hostID, err := nvme.GetHostID()
+	assert.Nil(t, err)
+	assert.Equal(t, "a2d57d74-a198-4e6b-aa78-97af9cd00f31", hostID)
+}
+
+func TestMockedGetHostIDError(t *testing.T) {
+	nvme := NewMockNVMe(map[string]string{})
+	GONVMEMock.InduceInitiatorError = true
+	_, err := nvme.GetHostID()
+	assert.NotNil(t, err)
+}
+
 func TestMockedNVMeTCPConnect(t *testing.T) {
 	nvme := NewMockNVMe(map[string]string{})
 	err := nvme.NVMeTCPConnect(NVMeTarget{}, false)

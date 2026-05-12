@@ -154,6 +154,15 @@ func (nvme *MockNVMe) getInitiators(_ string) ([]string, error) {
 	return mockedInitiators, nil
 }
 
+func (nvme *MockNVMe) getHostID() (string, error) {
+	if GONVMEMock.InduceInitiatorError {
+		return "", errors.New("getHostID induced error")
+	}
+
+	// Return a mock host ID
+	return "a2d57d74-a198-4e6b-aa78-97af9cd00f31", nil
+}
+
 func (nvme *MockNVMe) nvmeTCPConnect(_ NVMeTarget, _ bool) error {
 	if GONVMEMock.InduceTCPLoginError {
 		return errors.New("NVMeTCP Login induced error")
@@ -279,6 +288,11 @@ func (nvme *MockNVMe) DiscoverNVMeFCTargets(address string, login bool) ([]NVMeT
 // GetInitiators returns a list of NVMe initiators on the local system.
 func (nvme *MockNVMe) GetInitiators(filename string) ([]string, error) {
 	return nvme.getInitiators(filename)
+}
+
+// GetHostID returns the host ID from the local system.
+func (nvme *MockNVMe) GetHostID() (string, error) {
+	return nvme.getHostID()
 }
 
 // NVMeTCPConnect will attempt to log into an NVMe target

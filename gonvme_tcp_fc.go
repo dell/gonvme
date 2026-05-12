@@ -50,6 +50,9 @@ var (
 
 	// DefaultInitiatorNameFile is the default file which contains the initiator nqn
 	DefaultInitiatorNameFile = "/etc/nvme/hostnqn"
+
+	// DefaultHostIDFile is the default file which contains the NVMe host ID
+	DefaultHostIDFile = "/etc/nvme/hostid"
 )
 
 type command interface {
@@ -442,6 +445,11 @@ func (nvme *NVMe) GetInitiators(filename string) ([]string, error) {
 	return nvme.getInitiators(filename)
 }
 
+// GetHostID returns the NVMe host ID from the local system.
+func (nvme *NVMe) GetHostID() (string, error) {
+	return nvme.getHostID()
+}
+
 func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 	// a slice of filename, which might exist and define the nvme initiators
 	initiatorConfig := []string{}
@@ -487,6 +495,34 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 	}
 
 	return nqns, nil
+}
+
+func (nvme *NVMe) getHostID() (string, error) {
+	// /etc/nvme/hostid is the proper file for CentOS, RedHat, Sles, Ubuntu
+	hostIDFile := filepath.Clean(nvme.getChrootDirectory() + "/" + DefaultHostIDFile)
+
+	// Check if file exists
+	_, err := os.Stat(hostIDFile)
+	if err != nil {
+		return "", fmt.Errorf("NVMe host ID file %s does not exist: %v", hostIDFile, err)
+	}
+
+	// Read the file contents
+	out, err := os.ReadFile(hostIDFile)
+	if err != nil {
+		return "", fmt.Errorf("error reading NVMe host ID file %s: %v", hostIDFile, err)
+	}
+
+	// Get first non-empty line
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			return line, nil
+		}
+	}
+
+	return "", fmt.Errorf("NVMe host ID file %s is empty", hostIDFile)
 }
 
 // NVMeTCPConnect will attempt to connect into a given NVMeTCP target
