@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022-2024 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ package gonvme
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
+	"net"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/dell/csmlog"
 )
 
 type sessionParser struct{}
@@ -50,18 +50,22 @@ func (sp *sessionParser) Parse(data []byte) []NVMESession {
 	var response []SubSysResponse
 	err := json.Unmarshal([]byte(str), &response)
 	if err != nil {
-		log.Error("JSON-encoded parsing error: ", err.Error())
+		csmlog.WithFields(csmlog.Fields{
+			"error": err.Error(),
+		}).Error("JSON-encoded parsing error")
 		return result
 	}
 	for _, resp := range response {
 		for _, system := range resp.Subsystems {
 			session := NVMESession{}
 			session.Target = system.NQN
-			reAdd := `(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}`
-			re := regexp.MustCompilePOSIX(reAdd)
 			for _, path := range system.Paths {
 				session.Name = path["Name"]
 				session.NVMETransportName = NVMETransportName(path["Transport"])
+				// session is reused across the paths of one subsystem, so clear the
+				// per-path source address before parsing this path. FC paths carry no
+				// src_addr and must not inherit one from a preceding TCP path.
+				session.SourceAddr = ""
 				if path["Transport"] == NVMeTransportTypeFC {
 					fields := strings.Fields(path["Address"])
 					if len(fields) > 0 {
@@ -71,21 +75,51 @@ func (sp *sessionParser) Parse(data []byte) []NVMESession {
 						}
 					}
 				} else if path["Transport"] == NVMeTransportTypeTCP {
-					if re.MatchString(path["Address"]) {
-						ip := re.FindString(path["Address"])
-						portHolder := ""
-						for _, item := range strings.Split(path["Address"], ",") { // fmt: [traddr=10.230.1.1,trsvcid=4420,src=00]
-							if strings.Contains(item, "trsvcid") {
-								portHolder = item
-								break
-							}
+					// Parse the comma-separated key=value address field.
+					// Format: "traddr=<IP>,trsvcid=<port>[,<key>=<value>...]"
+					// Both IPv4 and IPv6 bare addresses are supported; net.ParseIP
+					// is the authoritative validator, replacing the former IPv4-only
+					// regex which silently ignored all IPv6 NVMe/TCP sessions.
+					var trAddr, trsvcid, srcAddr string
+					for _, item := range strings.Split(path["Address"], ",") {
+						item = strings.TrimSpace(item)
+						switch {
+						case strings.HasPrefix(item, "traddr="):
+							trAddr = strings.ReplaceAll(strings.TrimPrefix(item, "traddr="), "\"", "")
+						case strings.HasPrefix(item, "trsvcid="):
+							trsvcid = strings.ReplaceAll(strings.TrimPrefix(item, "trsvcid="), "\"", "")
+						case strings.HasPrefix(item, "src_addr="):
+							// Sessions established with "nvme connect --host-traddr" report
+							// the bound source address here. It is recorded as-is, with no
+							// validation: consumers only log it, and an absent or empty
+							// value leaves SourceAddr empty rather than failing the parse.
+							srcAddr = strings.ReplaceAll(strings.TrimPrefix(item, "src_addr="), "\"", "")
 						}
-						if portHolder != "" {
-							portParts := strings.Split(portHolder, "=")
-							if len(portParts) > 1 {
-								port := strings.ReplaceAll(portParts[1], "\"", "")
-								session.Portal = ip + ":" + port
-							}
+					}
+					// srcAddr is scoped to this path, so a session without src_addr never
+					// inherits the value from the previously parsed path of the same subsystem.
+					session.SourceAddr = srcAddr
+					if net.ParseIP(trAddr) != nil {
+						// Use strings.Contains(trAddr, ":") — not net.ParseIP().To4() — to
+						// decide whether to append the port. This intentionally mirrors the
+						// predicate used by gobrick.addDefaultNVMePortToVolumeInfoPortals:
+						//
+						//   if !strings.Contains(t.Portal, ":") { t.Portal += ":4420" }
+						//
+						// session.Portal must equal target.Portal for gobrick session-matching
+						// to succeed, so both sides must apply the same gate. Using To4() would
+						// diverge for IPv4-mapped IPv6 addresses (e.g. ::ffff:10.0.0.1): To4()
+						// returns non-nil (IPv4 path → appends port), while gobrick sees ":"
+						// and skips the port-append, causing a mismatch.
+						if strings.Contains(trAddr, ":") {
+							// IPv6 or IPv4-mapped IPv6: gobrick skips port-append; emit bare
+							// address so session.Portal == target.Portal.
+							session.Portal = trAddr
+						} else if trsvcid != "" {
+							// Pure IPv4: gobrick appends ":port"; mirror that format here.
+							session.Portal = trAddr + ":" + trsvcid
+						} else {
+							session.Portal = trAddr
 						}
 					}
 				} else {
