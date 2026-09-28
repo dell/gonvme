@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022-2025 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package gonvme
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -30,7 +31,7 @@ import (
 	"strings"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/dell/csmlog"
 )
 
 const (
@@ -66,6 +67,10 @@ var getCommand = func(name string, arg ...string) command {
 	return exec.Command(name, arg...)
 }
 
+var getCommandContext = func(ctx context.Context, name string, arg ...string) command {
+	return exec.CommandContext(ctx, name, arg...)
+}
+
 var getPaths = func() []string {
 	return []string{"/sbin/nvme", "/usr/sbin/nvme"}
 }
@@ -96,15 +101,26 @@ func NewNVMe(opts map[string]string) *NVMe {
 
 		info, err := os.Stat(path)
 		if os.IsNotExist(err) {
-			log.Errorf("Error: Path %s does not exist\n", path)
+			csmlog.WithFields(csmlog.Fields{
+				"path": path,
+			}).Error("Path does not exist")
 		} else if err != nil {
-			log.Errorf("Error: Unable to access path %s: %v\n", path, err)
+			csmlog.WithFields(csmlog.Fields{
+				"path":  path,
+				"error": err,
+			}).Error("Unable to access path")
 		} else if info.IsDir() {
-			log.Errorf("Error: Path %s is a directory, not an executable\n", path)
+			csmlog.WithFields(csmlog.Fields{
+				"path": path,
+			}).Error("Path is a directory, not an executable")
 		} else {
-			log.Infof("Success: Path %s exists and is an executable\n", path)
+			csmlog.WithFields(csmlog.Fields{
+				"path": path,
+			}).Info("Path exists and is an executable")
 			nvme.NVMeCommand = pathCopy
-			log.Infof("nvme.NVMeCommand: %s", nvme.NVMeCommand)
+			csmlog.WithFields(csmlog.Fields{
+				"nvme_command": nvme.NVMeCommand,
+			}).Info("NVMe command path set")
 			break
 		}
 	}
@@ -132,11 +148,13 @@ func (nvme *NVMe) buildNVMeCommand(cmd []string) []string {
 func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 	match, err := filepath.Glob(fcHostPath)
 	if err != nil {
-		log.Errorf("Error gathering fc hosts: %v", err)
+		csmlog.WithFields(csmlog.Fields{
+			"error": err,
+		}).Error("Error gathering fc hosts")
 		return []FCHBAInfo{}, err
 	}
 	if len(match) == 0 {
-		log.Errorf("The fc_host path doesn't exist")
+		csmlog.Error("The fc_host path doesn't exist")
 		return []FCHBAInfo{}, err
 	}
 
@@ -147,7 +165,10 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 		portNamePath := path.Join(m, "port_name")
 		data, err := os.ReadFile(filepath.Clean(portNamePath))
 		if err != nil {
-			log.Errorf("match: %s failed to read port_name file: %s", match, err.Error())
+			csmlog.WithFields(csmlog.Fields{
+				"match": match,
+				"error": err.Error(),
+			}).Error("failed to read port_name file")
 			continue
 		}
 		FCHostInfo.PortName = strings.TrimSpace(string(data))
@@ -155,7 +176,10 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 		nodeNamePath := path.Join(m, "node_name")
 		data, err = os.ReadFile(filepath.Clean(nodeNamePath))
 		if err != nil {
-			log.Errorf("match: %s failed to read node_name file: %s", match, err.Error())
+			csmlog.WithFields(csmlog.Fields{
+				"match": match,
+				"error": err.Error(),
+			}).Error("failed to read node_name file")
 			continue
 		}
 		FCHostInfo.NodeName = strings.TrimSpace(string(data))
@@ -168,21 +192,38 @@ func (nvme *NVMe) getFCHostInfo() ([]FCHBAInfo, error) {
 	return FCHostsInfo, nil
 }
 
-// DiscoverNVMeTCPTargets - runs nvme discovery and returns a list of NVMeTCP targets.
+// DiscoverNVMeTCPTargets runs nvme discovery and returns a list of NVMeTCP targets.
 func (nvme *NVMe) DiscoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
 	return nvme.discoverNVMeTCPTargets(address, login)
 }
 
+// DiscoverNVMeTCPTargetsContext runs nvme discovery and stops the command when ctx is canceled.
+func (nvme *NVMe) DiscoverNVMeTCPTargetsContext(ctx context.Context, address string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeTCPTargetsContext(ctx, address, login)
+}
+
 func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeTCPTargetsWithCommand(context.Background(), address, login,
+		func(_ context.Context, name string, args ...string) command { return getCommand(name, args...) })
+}
+
+func (nvme *NVMe) discoverNVMeTCPTargetsContext(ctx context.Context, address string, login bool) ([]NVMeTarget, error) {
+	return nvme.discoverNVMeTCPTargetsWithCommand(ctx, address, login, getCommandContext)
+}
+
+func (nvme *NVMe) discoverNVMeTCPTargetsWithCommand(ctx context.Context, address string, login bool, commandFactory func(context.Context, string, ...string) command) ([]NVMeTarget, error) {
 	// TODO: add injection check on address
 	// nvme discovery is done via nvme cli
 	// nvme discover -t tcp -a <NVMe interface IP> -s <port>
 	exe := nvme.buildNVMeCommand([]string{nvme.NVMeCommand, "discover", "-t", "tcp", "-a", address, "-s", NVMePort})
-	cmd := getCommand(exe[0], exe[1:]...) // #nosec G204
+	cmd := commandFactory(ctx, exe[0], exe[1:]...) // #nosec G204
 
 	out, err := cmd.Output()
 	if err != nil {
-		log.Errorf("\nError discovering %s: %v", address, err)
+		csmlog.WithFields(csmlog.Fields{
+			"address": address,
+			"error":   err,
+		}).Error("Error discovering NVMeTCP targets")
 		return []NVMeTarget{}, err
 	}
 
@@ -287,7 +328,9 @@ func (nvme *NVMe) discoverNVMeTCPTargets(address string, login bool) ([]NVMeTarg
 		for _, t := range targets {
 			err = nvme.NVMeTCPConnect(t, false)
 			if err != nil {
-				log.Errorf("Error during NVMeTCP connect")
+				csmlog.WithFields(csmlog.Fields{
+					"error": err,
+				}).Error("Error during NVMeTCP connect")
 			}
 		}
 	}
@@ -309,7 +352,9 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 	var out []byte
 	FCHostsInfo, err := nvme.getFCHostInfo()
 	if err != nil || len(FCHostsInfo) == 0 {
-		log.Errorf("Error gathering NVMe/FC Hosts on the host side: %v", err)
+		csmlog.WithFields(csmlog.Fields{
+			"error": err,
+		}).Error("Error gathering NVMe/FC Hosts on the host side")
 		return []NVMeTarget{}, err
 	}
 
@@ -422,7 +467,9 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 	}
 
 	if len(targets) == 0 {
-		log.Errorf("Error discovering NVMe/FC targets: %v", err)
+		csmlog.WithFields(csmlog.Fields{
+			"error": err,
+		}).Error("Error discovering NVMe/FC targets")
 		return []NVMeTarget{}, err
 	}
 
@@ -432,7 +479,9 @@ func (nvme *NVMe) discoverNVMeFCTargets(targetAddress string, login bool) ([]NVM
 		for _, t := range targets {
 			err = nvme.NVMeFCConnect(t, false)
 			if err != nil {
-				log.Errorf("Error during NVMeFC connect")
+				csmlog.WithFields(csmlog.Fields{
+					"error": err,
+				}).Error("Error during NVMeFC connect")
 			}
 		}
 	}
@@ -479,7 +528,9 @@ func (nvme *NVMe) getInitiators(filename string) ([]string, error) {
 		// get the contents of the initiator config file
 		out, err := os.ReadFile(filepath.Clean(init))
 		if err != nil {
-			log.Errorf("Error gathering initiator names: %v", err)
+			csmlog.WithFields(csmlog.Fields{
+				"error": err,
+			}).Error("Error gathering initiator names")
 		}
 		lines := strings.Split(string(out), "\n")
 
@@ -552,7 +603,7 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 	for scanner.Scan() {
 		Output = scanner.Text()
 	}
-	log.Debugf("connect output: %s", Output)
+	csmlog.Debugf("connect output: %s", Output)
 	err = cmd.Wait()
 
 	// NVMEAlreadyConnected contains output holder for nvme connect
@@ -569,32 +620,50 @@ func (nvme *NVMe) nvmeTCPConnect(target NVMeTarget, duplicateConnect bool) error
 				// do not treat this as a failure
 				// this is applicable if nvme cli version 1.16 or below
 				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
-					log.Infof("NVMe connection already exists\n")
+					csmlog.WithFields(csmlog.Fields{
+						"target_nqn": target.TargetNqn,
+						"portal":     target.Portal,
+					}).Info("NVMe connection already exists")
 					err = nil
 				} else {
 					msg := fmt.Sprintf("error connecting to nvme target %s at %s: %v: %s", target.TargetNqn, target.Portal, err, Output)
-					log.Errorf("\n%s", msg)
+					csmlog.WithFields(csmlog.Fields{
+						"error": msg,
+					}).Error("error connecting to nvme target")
 					return fmt.Errorf("%s", msg)
 				}
 			} else if nvmeConnectResult == 1 && NVMEAlreadyConnected.MatchString(Output) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
-				log.Infof("NVMe connection already exists\n")
+				csmlog.WithFields(csmlog.Fields{
+					"target_nqn": target.TargetNqn,
+					"portal":     target.Portal,
+				}).Info("NVMe connection already exists")
 				err = nil
 			} else {
-				log.Errorf("\nnvme connect failure: %v, %s", err, err.Error())
+				csmlog.WithFields(csmlog.Fields{
+					"error": err.Error(),
+				}).Error("nvme connect failure")
 			}
 		} else {
-			log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+			csmlog.WithFields(csmlog.Fields{
+				"target_nqn": target.TargetNqn,
+				"portal":     target.Portal,
+				"error":      err,
+			}).Error("Error during nvme connect")
 		}
 
 		if err != nil {
 			msg := fmt.Sprintf("error connecting to nvme target %s at %s: %v: %s", target.TargetNqn, target.Portal, err, Output)
-			log.Errorf("\n%s", msg)
+			csmlog.WithFields(csmlog.Fields{
+				"error": msg,
+			}).Error("error connecting to nvme target")
 			return fmt.Errorf("%s", msg)
 		}
 	} else {
-		log.Infof("\nnvme connect successful: %s", target.TargetNqn)
+		csmlog.WithFields(csmlog.Fields{
+			"target_nqn": target.TargetNqn,
+		}).Info("nvme connect successful")
 	}
 
 	return nil
@@ -645,30 +714,54 @@ func (nvme *NVMe) nvmeFCConnect(target NVMeTarget, duplicateConnect bool) error 
 				// do not treat this as a failure
 				// this is applicable if nvme cli version 1.16 or below
 				if Output == "Failed to write to /dev/nvme-fabrics: Operation already in progress" || Output == "" {
-					log.Infof("NVMe connection already exists\n")
+					csmlog.WithFields(csmlog.Fields{
+						"target_nqn": target.TargetNqn,
+						"portal":     target.Portal,
+					}).Info("NVMe connection already exists")
 					err = nil
 				} else {
-					log.Errorf("\nError during nvme connect %s at %s: %v", target.TargetNqn, target.Portal, err)
+					csmlog.WithFields(csmlog.Fields{
+						"target_nqn": target.TargetNqn,
+						"portal":     target.Portal,
+						"error":      err,
+					}).Error("Error during nvme connect")
 					return err
 				}
 			} else if nvmeConnectResult == 1 && NVMEAlreadyConnected.MatchString(Output) {
 				// session already exists
 				// this is applicable if nvme cli version is 2.0 and above
-				log.Infof("NVMe connection already exists\n")
+				csmlog.WithFields(csmlog.Fields{
+					"target_nqn": target.TargetNqn,
+					"portal":     target.Portal,
+				}).Info("NVMe connection already exists")
 				err = nil
 			} else {
-				log.Errorf("NVMe/FC connect failure: %v", err)
+				csmlog.WithFields(csmlog.Fields{
+					"error": err,
+				}).Error("NVMe/FC connect failure")
 			}
 		} else {
-			log.Errorf("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+			csmlog.WithFields(csmlog.Fields{
+				"target_nqn": target.TargetNqn,
+				"portal":     target.Portal,
+				"host_adr":   target.HostAdr,
+				"error":      err,
+			}).Error("Error during NVMe/FC connect")
 		}
 
 		if err != nil {
-			log.Errorf("Error during NVMe/FC connect %s at %s for %s host: %v", target.TargetNqn, target.Portal, target.HostAdr, err)
+			csmlog.WithFields(csmlog.Fields{
+				"target_nqn": target.TargetNqn,
+				"portal":     target.Portal,
+				"host_adr":   target.HostAdr,
+				"error":      err,
+			}).Error("Error during NVMe/FC connect")
 			return err
 		}
 	} else {
-		log.Infof("NVMe/FC connect successful: %s", target.TargetNqn)
+		csmlog.WithFields(csmlog.Fields{
+			"target_nqn": target.TargetNqn,
+		}).Info("NVMe/FC connect successful")
 	}
 
 	return nil
@@ -688,9 +781,15 @@ func (nvme *NVMe) nvmeDisconnect(target NVMeTarget) error {
 	_, err := cmd.Output()
 
 	if err != nil {
-		log.Errorf("\nError during NVMe disconnect %s at %s: %v", target.TargetNqn, target.Portal, err)
+		csmlog.WithFields(csmlog.Fields{
+			"target_nqn": target.TargetNqn,
+			"portal":     target.Portal,
+			"error":      err,
+		}).Error("Error during NVMe disconnect")
 	} else {
-		log.Infof("\nnvme disconnect successful: %s", target.TargetNqn)
+		csmlog.WithFields(csmlog.Fields{
+			"target_nqn": target.TargetNqn,
+		}).Info("nvme disconnect successful")
 	}
 
 	return err
@@ -713,7 +812,10 @@ func (nvme *NVMe) ListNVMeDeviceAndNamespace() ([]DevicePathAndNamespace, error)
 	var nvmeResult NvmeResult
 	err = json.Unmarshal(output, &nvmeResult)
 	if err != nil {
-		log.Errorf("Could not unmarshal nvme list output: %v\nnvme list output: '%s'", err, output)
+		csmlog.WithFields(csmlog.Fields{
+			"error":  err,
+			"output": output,
+		}).Error("Could not unmarshal nvme list output")
 		return []DevicePathAndNamespace{}, err
 	}
 

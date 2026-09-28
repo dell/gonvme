@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2022-2023 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2022-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,11 @@ type NVMESession struct {
 	Name              string
 	NVMESessionState  NVMESessionState
 	NVMETransportName NVMETransportName
+	// SourceAddr is the host source address the session is bound to, taken from
+	// the src_addr field of the NVMe/TCP path address. It is empty when the kernel
+	// reports no src_addr and for every FC session. Consumers log it as a
+	// diagnostic aid; nothing in gonvme validates it.
+	SourceAddr string
 }
 
 // NVMeSessionParser defines an NVMe session parser

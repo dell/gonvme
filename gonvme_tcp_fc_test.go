@@ -1,6 +1,6 @@
 /*
  *
- * Copyright © 2024 Dell Inc. or its subsidiaries. All Rights Reserved.
+ * Copyright © 2024-2026 Dell Inc. or its subsidiaries. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package gonvme
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -25,7 +26,7 @@ import (
 	"os/exec"
 	"testing"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/dell/csmlog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,12 +45,16 @@ var (
 func reset() {
 	testValuesFile, err := os.ReadFile("testdata/unittest_values.json")
 	if err != nil {
-		log.Infof("Error Reading the file: %s ", err)
+		csmlog.WithFields(csmlog.Fields{
+			"error": err,
+		}).Info("Error Reading the file")
 	}
 	var testValues testData
 	err = json.Unmarshal(testValuesFile, &testValues)
 	if err != nil {
-		log.Infof("Error during unmarshal: %s", err)
+		csmlog.WithFields(csmlog.Fields{
+			"error": err,
+		}).Info("Error during unmarshal")
 	}
 	tcpTestPortal = testValues.TCPPortal
 	testTarget = testValues.Target
@@ -688,6 +693,7 @@ func TestGetSessions(t *testing.T) {
 					Name:              "nvme3",
 					NVMETransportName: "tcp",
 					NVMESessionState:  "live",
+					SourceAddr:        "10.1.1.2",
 				},
 				{
 					Target:            "nqn.1988-11.com.dell:mock:00:1a1111a1111aAA11111A",
@@ -695,6 +701,7 @@ func TestGetSessions(t *testing.T) {
 					Name:              "nvme2",
 					NVMETransportName: "tcp",
 					NVMESessionState:  "live",
+					SourceAddr:        "10.1.1.2",
 				},
 			},
 			false,
@@ -782,6 +789,26 @@ sectype: none
 	if err != nil {
 		t.Error(err.Error())
 	}
+}
+
+func TestDiscoverNVMeTCPTargetsContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	originalGetCommandContext := getCommandContext
+	defer func() { getCommandContext = originalGetCommandContext }()
+
+	called := false
+	getCommandContext = func(commandCtx context.Context, _ string, _ ...string) command {
+		called = true
+		assert.Error(t, commandCtx.Err())
+		return &mockCommand{outErr: commandCtx.Err()}
+	}
+
+	nvme := NewNVMe(map[string]string{})
+	_, err := nvme.discoverNVMeTCPTargetsContext(ctx, "2001:db8::1", false)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.True(t, called)
 }
 
 func TestDiscoverNVMeFCTargets(t *testing.T) {
